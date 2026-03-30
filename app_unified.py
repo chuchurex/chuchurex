@@ -6,18 +6,53 @@ Versión portable: funciona en desarrollo y producción
 
 import os
 import json
+import logging
 import random
 import asyncio
+import time
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Query, Header
+from fastapi import FastAPI, HTTPException, Query, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, field_validator
+from typing import List, Literal, Optional
 import html
 import anthropic
 from dotenv import load_dotenv
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+logger = logging.getLogger("chuchurex")
+
+# =============================================================================
+# RATE LIMITER (in-memory, per IP)
+# =============================================================================
+
+class RateLimiter:
+    """Simple in-memory rate limiter per IP address"""
+    def __init__(self):
+        self.requests: dict[str, list[float]] = defaultdict(list)
+
+    def is_allowed(self, ip: str, max_requests: int, window_seconds: int) -> bool:
+        now = time.time()
+        cutoff = now - window_seconds
+        # Clean old entries
+        self.requests[ip] = [t for t in self.requests[ip] if t > cutoff]
+        if len(self.requests[ip]) >= max_requests:
+            return False
+        self.requests[ip].append(now)
+        return True
+
+rate_limiter = RateLimiter()
 
 # =============================================================================
 # CONFIGURACIÓN PORTABLE
@@ -120,7 +155,7 @@ def save_chat(messages: list, response: str):
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        print(f"Error guardando chat: {e}")
+        logger.warning(f"Error guardando chat: {e}")
 
 # =============================================================================
 # SYSTEM PROMPTS (MULTILINGÜE)
@@ -347,13 +382,34 @@ def get_system_prompt(lang="es"):
 # =============================================================================
 
 class Message(BaseModel):
-    role: str
+    role: Literal["user", "assistant"]
     content: str
+
+    @field_validator("content")
+    @classmethod
+    def content_not_too_long(cls, v: str) -> str:
+        if len(v) > 10000:
+            raise ValueError("Message content too long (max 10000 chars)")
+        return v
 
 class ChatRequest(BaseModel):
     message: str
     history: Optional[List[Message]] = []
     lang: Optional[str] = "es"  # es, en, pt
+
+    @field_validator("message")
+    @classmethod
+    def message_not_too_long(cls, v: str) -> str:
+        if len(v) > 5000:
+            raise ValueError("Message too long (max 5000 chars)")
+        return v
+
+    @field_validator("history")
+    @classmethod
+    def history_not_too_long(cls, v: list) -> list:
+        if v and len(v) > 20:
+            return v[-20:]
+        return v
 
 class ChatResponse(BaseModel):
     response: str
@@ -364,6 +420,20 @@ class ProposalRequest(BaseModel):
     client_name: str
     project_summary: str
     conversation_history: List[Message]
+
+    @field_validator("client_name")
+    @classmethod
+    def name_valid(cls, v: str) -> str:
+        if len(v) > 100:
+            raise ValueError("Client name too long (max 100 chars)")
+        return v.strip()
+
+    @field_validator("project_summary")
+    @classmethod
+    def summary_valid(cls, v: str) -> str:
+        if len(v) > 5000:
+            raise ValueError("Project summary too long (max 5000 chars)")
+        return v
 
 # =============================================================================
 # FASTAPI APP
@@ -394,8 +464,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Api-Key"],
 )
 
 # =============================================================================
@@ -407,13 +477,15 @@ async def root():
     return {
         "status": "ok",
         "message": "Chuchurex API is running",
-        "version": "2.0.0",
-        "environment": "production" if IS_PRODUCTION else "development"
+        "version": "2.0.0"
     }
 
 @app.get("/health")
-async def health():
+async def health(req: Request):
     """Health check que verifica conexión real con Anthropic API"""
+    client_ip = req.client.host if req.client else "unknown"
+    if not rate_limiter.is_allowed(client_ip, max_requests=5, window_seconds=60):
+        raise HTTPException(status_code=429, detail="rate_limited")
     try:
         # Llamada mínima para verificar que la API key funciona y hay crédito
         test = await client.messages.create(
@@ -447,7 +519,7 @@ async def view_chats(key: str = Query(None)):
                     chat_data = json.load(f)
                     chats.append(chat_data)
     except Exception as e:
-        print(f"Error leyendo chats: {e}")
+        logger.warning(f"Error leyendo chats: {e}")
     
     page_html = """
     <!DOCTYPE html>
@@ -492,12 +564,20 @@ async def view_chats(key: str = Query(None)):
     return HTMLResponse(page_html)
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, req: Request):
     """Endpoint principal del chat"""
+    client_ip = req.client.host if req.client else "unknown"
+    if not rate_limiter.is_allowed(client_ip, max_requests=20, window_seconds=60):
+        raise HTTPException(status_code=429, detail="rate_limited")
     try:
+        # Sanitize history: enforce alternating user/assistant roles
         messages = []
+        expected_role = "user"
         for msg in request.history:
+            if msg.role != expected_role:
+                continue  # Skip messages that break alternation
             messages.append({"role": msg.role, "content": msg.content})
+            expected_role = "assistant" if expected_role == "user" else "user"
         if not messages or messages[-1]["content"] != request.message:
             messages.append({"role": "user", "content": request.message})
 
@@ -576,13 +656,9 @@ async def chat(request: ChatRequest):
         bot_offered_pdf = any(kw in last_bot_msg for kw in pdf_offer_keywords)
         user_accepted = any(accept in current_user_msg for accept in user_accepts) and len(current_user_msg) < 50
         
-        print(f"[PDF DEBUG] Last bot msg: '{last_bot_msg[:100]}...'")
-        print(f"[PDF DEBUG] Current user msg: '{current_user_msg}'")
-        print(f"[PDF DEBUG] Bot offered PDF: {bot_offered_pdf}, User accepted: {user_accepted}")
-        
         if bot_offered_pdf and user_accepted:
             should_generate_pdf = True
-            print("[PDF DEBUG] ✅ Should generate PDF!")
+            logger.info("PDF generation triggered by user acceptance")
 
         response = await client.messages.create(
             model="claude-haiku-4-5-20251001",
@@ -610,27 +686,27 @@ async def chat(request: ChatRequest):
                         pdf_url=pdf_result
                     )
             except Exception as e:
-                print(f"Error generando PDF: {e}")
+                logger.error(f"Error generando PDF: {e}")
                 response_text = response_text.replace("[PDF_TRIGGER]", "").strip()
 
         return ChatResponse(response=response_text.replace("[PDF_TRIGGER]", "").strip())
     
     except anthropic.AuthenticationError as e:
-        print(f"Anthropic auth error (possibly no credits): {e}")
+        logger.error(f"Anthropic auth error: {e}")
         raise HTTPException(status_code=503, detail="service_unavailable")
     except anthropic.RateLimitError as e:
-        print(f"Anthropic rate limit: {e}")
+        logger.warning(f"Anthropic rate limit: {e}")
         raise HTTPException(status_code=429, detail="rate_limited")
     except anthropic.APIStatusError as e:
-        print(f"Anthropic API status error ({e.status_code}): {e}")
+        logger.error(f"Anthropic API status error: {e.status_code}")
         if e.status_code == 402 or e.status_code == 401:
             raise HTTPException(status_code=503, detail="service_unavailable")
         raise HTTPException(status_code=502, detail="api_error")
     except anthropic.APIError as e:
-        print(f"Anthropic API error: {e}")
+        logger.error(f"Anthropic API error: {e}")
         raise HTTPException(status_code=502, detail="api_error")
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Unexpected error in /chat: {e}")
         raise HTTPException(status_code=500, detail="internal_error")
 
 async def generate_pdf_from_conversation(messages: list) -> Optional[str]:
@@ -748,31 +824,34 @@ Agendemos una videollamada de 30 minutos para:
         except asyncio.TimeoutError:
             process.kill()
             await process.communicate()
-            print("Timeout generando PDF")
+            logger.warning("Timeout generando PDF")
             return None
 
         if process.returncode == 0 and pdf_path.exists():
             return f"/download-proposal/{filename_base}.pdf"
         else:
-            print(f"Error en generación PDF: {stderr.decode()}")
+            logger.error(f"Error en generación PDF: {stderr.decode()}")
             return None
 
     except asyncio.TimeoutError:
-        print("Timeout generando PDF")
+        logger.warning("Timeout generando PDF")
         return None
     except Exception as e:
-        print(f"Error generando PDF: {e}")
+        logger.error(f"Error generando PDF: {e}")
         return None
 
 @app.get("/download-proposal/{filename}")
 async def download_proposal(filename: str):
     """Descarga una propuesta PDF generada"""
     try:
-        # Sanitizar filename
-        if ".." in filename or "/" in filename:
+        # Sanitizar filename - solo permitir caracteres seguros
+        if not filename.endswith(".pdf") or ".." in filename or "/" in filename or "\\" in filename:
             raise HTTPException(status_code=400, detail="Invalid filename")
-        
-        pdf_path = PROPOSALS_DIR / filename
+
+        pdf_path = (PROPOSALS_DIR / filename).resolve()
+        # Verificar que el path resuelto está dentro de PROPOSALS_DIR
+        if not str(pdf_path).startswith(str(PROPOSALS_DIR.resolve())):
+            raise HTTPException(status_code=400, detail="Invalid filename")
         if not pdf_path.exists():
             raise HTTPException(status_code=404, detail="Propuesta no encontrada")
 
@@ -784,11 +863,15 @@ async def download_proposal(filename: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error descargando propuesta: {str(e)}")
+        logger.error(f"Error descargando propuesta: {e}")
+        raise HTTPException(status_code=500, detail="internal_error")
 
 @app.post("/generate-proposal")
-async def generate_proposal(request: ProposalRequest, x_api_key: Optional[str] = Header(None)):
+async def generate_proposal(request: ProposalRequest, req: Request, x_api_key: Optional[str] = Header(None)):
     """Genera una propuesta en PDF basada en datos proporcionados"""
+    client_ip = req.client.host if req.client else "unknown"
+    if not rate_limiter.is_allowed(client_ip, max_requests=3, window_seconds=300):
+        raise HTTPException(status_code=429, detail="rate_limited")
     api_key = os.getenv("PROPOSAL_API_KEY")
     if api_key and (not x_api_key or x_api_key != api_key):
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -854,7 +937,8 @@ Crea un documento de propuesta profesional en Markdown incluyendo:
             raise HTTPException(status_code=500, detail="PDF generation timed out")
 
         if process.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"PDF generation failed: {stderr.decode()}")
+            logger.error(f"PDF generation failed: {stderr.decode()}")
+            raise HTTPException(status_code=500, detail="PDF generation failed")
 
         return FileResponse(
             path=str(pdf_path),
@@ -867,7 +951,8 @@ Crea un documento de propuesta profesional en Markdown incluyendo:
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating proposal: {str(e)}")
+        logger.error(f"Error generating proposal: {e}")
+        raise HTTPException(status_code=500, detail="internal_error")
 
 # =============================================================================
 # MAIN
