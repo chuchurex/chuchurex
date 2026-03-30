@@ -6,9 +6,12 @@
 
 set -e  # Salir si hay error
 
-# Load environment variables
+# Load environment variables (only deployment-related ones)
 if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
+    VPS_USER=$(grep '^VPS_USER=' .env | cut -d'=' -f2-)
+    VPS_HOST=$(grep '^VPS_HOST=' .env | cut -d'=' -f2-)
+    VPS_PATH=$(grep '^VPS_PATH=' .env | cut -d'=' -f2-)
+    CHATS_ACCESS_KEY=$(grep '^CHATS_ACCESS_KEY=' .env | cut -d'=' -f2-)
 fi
 
 SERVER="${VPS_USER:-root}@${VPS_HOST}"

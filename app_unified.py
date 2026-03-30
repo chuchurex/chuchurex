@@ -7,14 +7,15 @@ Versión portable: funciona en desarrollo y producción
 import os
 import json
 import random
-import subprocess
+import asyncio
 from datetime import datetime
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
+import html
 import anthropic
 from dotenv import load_dotenv
 
@@ -41,7 +42,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 
 # Detectar entorno
 IS_PRODUCTION = os.getenv("ENVIRONMENT", "development") == "production"
@@ -415,8 +416,8 @@ async def health():
     """Health check que verifica conexión real con Anthropic API"""
     try:
         # Llamada mínima para verificar que la API key funciona y hay crédito
-        test = client.messages.create(
-            model="claude-3-haiku-20240307",
+        test = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
             max_tokens=5,
             messages=[{"role": "user", "content": "ok"}]
         )
@@ -433,7 +434,8 @@ async def health():
 @app.get("/chats", response_class=HTMLResponse)
 async def view_chats(key: str = Query(None)):
     """Vista HTML de conversaciones guardadas (para análisis beta)"""
-    if key != os.getenv("CHATS_ACCESS_KEY", ""):
+    access_key = os.getenv("CHATS_ACCESS_KEY")
+    if not access_key or not key or key != access_key:
         return HTMLResponse("<h1>Acceso denegado</h1>", status_code=403)
     
     chats = []
@@ -447,7 +449,7 @@ async def view_chats(key: str = Query(None)):
     except Exception as e:
         print(f"Error leyendo chats: {e}")
     
-    html = """
+    page_html = """
     <!DOCTYPE html>
     <html lang="es">
     <head>
@@ -471,22 +473,23 @@ async def view_chats(key: str = Query(None)):
         <h1>Chats Beta - Chuchurex</h1>
         <p class="count">Total: """ + str(len(chats)) + """ conversaciones</p>
     """
-    
+
     if not chats:
-        html += '<div class="empty">No hay chats guardados todavía.</div>'
+        page_html += '<div class="empty">No hay chats guardados todavía.</div>'
     else:
         for chat in chats[:50]:  # Limitar a 50 más recientes
-            html += f'<div class="chat"><div class="timestamp">{chat.get("timestamp", "Sin fecha")}</div>'
+            timestamp = html.escape(str(chat.get("timestamp", "Sin fecha")))
+            page_html += f'<div class="chat"><div class="timestamp">{timestamp}</div>'
             for msg in chat.get("messages", []):
-                role_class = "user" if msg["role"] == "user" else "assistant"
-                content = msg["content"].replace("<", "&lt;").replace(">", "&gt;")
-                html += f'<div class="message {role_class}">{content}</div>'
-            response = chat.get("response", "").replace("<", "&lt;").replace(">", "&gt;")
-            html += f'<div class="message assistant">{response}</div>'
-            html += '</div>'
-    
-    html += "</body></html>"
-    return HTMLResponse(html)
+                role_class = "user" if msg.get("role") == "user" else "assistant"
+                content = html.escape(str(msg.get("content", "")))
+                page_html += f'<div class="message {role_class}">{content}</div>'
+            response = html.escape(str(chat.get("response", "")))
+            page_html += f'<div class="message assistant">{response}</div>'
+            page_html += '</div>'
+
+    page_html += "</body></html>"
+    return HTMLResponse(page_html)
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -581,8 +584,8 @@ async def chat(request: ChatRequest):
             should_generate_pdf = True
             print("[PDF DEBUG] ✅ Should generate PDF!")
 
-        response = client.messages.create(
-            model="claude-3-haiku-20240307",
+        response = await client.messages.create(
+            model="claude-haiku-4-5-20251001",
             max_tokens=1024,
             system=current_prompt,
             messages=messages
@@ -717,7 +720,7 @@ Agendemos una videollamada de 30 minutos para:
 *Este documento es una propuesta inicial basada en la conversación. Los detalles y funcionalidades pueden ajustarse según tus necesidades específicas.*
 """
 
-        analysis_response = client.messages.create(
+        analysis_response = await client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4096,
             messages=[{"role": "user", "content": analysis_prompt}]
@@ -729,25 +732,32 @@ Agendemos una videollamada de 30 minutos para:
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(proposal_md)
 
-        # Generar PDF con Node.js
+        # Generar PDF con Node.js (async subprocess)
         generator_script = PDF_GENERATOR_DIR / "generate-pdf-api.js"
-        
+
         node_path = "node"
-        result = subprocess.run(
-            [node_path, str(generator_script), str(md_path), str(pdf_path)],
-            capture_output=True,
-            text=True,
-            timeout=60,
+        process = await asyncio.create_subprocess_exec(
+            node_path, str(generator_script), str(md_path), str(pdf_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
             cwd=str(PDF_GENERATOR_DIR)
         )
 
-        if result.returncode == 0 and pdf_path.exists():
-            return f"/download-proposal/{filename_base}.pdf"
-        else:
-            print(f"Error en generación PDF: {result.stderr}")
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=60)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.communicate()
+            print("Timeout generando PDF")
             return None
 
-    except subprocess.TimeoutExpired:
+        if process.returncode == 0 and pdf_path.exists():
+            return f"/download-proposal/{filename_base}.pdf"
+        else:
+            print(f"Error en generación PDF: {stderr.decode()}")
+            return None
+
+    except asyncio.TimeoutError:
         print("Timeout generando PDF")
         return None
     except Exception as e:
@@ -777,8 +787,11 @@ async def download_proposal(filename: str):
         raise HTTPException(status_code=500, detail=f"Error descargando propuesta: {str(e)}")
 
 @app.post("/generate-proposal")
-async def generate_proposal(request: ProposalRequest):
+async def generate_proposal(request: ProposalRequest, x_api_key: Optional[str] = Header(None)):
     """Genera una propuesta en PDF basada en datos proporcionados"""
+    api_key = os.getenv("PROPOSAL_API_KEY")
+    if api_key and (not x_api_key or x_api_key != api_key):
+        raise HTTPException(status_code=401, detail="Unauthorized")
     try:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_name = request.client_name.lower().replace(" ", "_")[:20]
@@ -813,37 +826,43 @@ Crea un documento de propuesta profesional en Markdown incluyendo:
 - Próximos pasos
 """
         
-        response = client.messages.create(
+        response = await client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4096,
             messages=[{"role": "user", "content": analysis_prompt}]
         )
-        
+
         proposal_md = response.content[0].text
-        
+
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(proposal_md)
-        
+
         generator_script = PDF_GENERATOR_DIR / "generate-pdf-api.js"
         node_path = "node"
-        result = subprocess.run(
-            [node_path, str(generator_script), str(md_path), str(pdf_path)],
-            capture_output=True,
-            text=True,
-            timeout=60,
+        process = await asyncio.create_subprocess_exec(
+            node_path, str(generator_script), str(md_path), str(pdf_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
             cwd=str(PDF_GENERATOR_DIR)
         )
-        
-        if result.returncode != 0:
-            raise HTTPException(status_code=500, detail=f"PDF generation failed: {result.stderr}")
-        
+
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=60)
+        except asyncio.TimeoutError:
+            process.kill()
+            await process.communicate()
+            raise HTTPException(status_code=500, detail="PDF generation timed out")
+
+        if process.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"PDF generation failed: {stderr.decode()}")
+
         return FileResponse(
             path=str(pdf_path),
             media_type="application/pdf",
             filename=f"propuesta_{request.client_name.replace(' ', '_')}.pdf"
         )
-        
-    except subprocess.TimeoutExpired:
+
+    except asyncio.TimeoutError:
         raise HTTPException(status_code=500, detail="PDF generation timed out")
     except HTTPException:
         raise

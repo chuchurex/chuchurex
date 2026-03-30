@@ -237,6 +237,14 @@ function applyTranslations(lang) {
             el.placeholder = trans[key];
         }
     });
+
+    // Update elements with data-i18n-title (e.g. <title>)
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (trans[key]) {
+            el.textContent = trans[key];
+        }
+    });
 }
 
 // Export for use in app.js
