@@ -40,6 +40,9 @@ async function sendMessage(message) {
     const typingIndicator = showTypingIndicator();
 
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
         const response = await fetch(`${API_URL}/chat`, {
             method: 'POST',
             headers: {
@@ -49,8 +52,11 @@ async function sendMessage(message) {
                 message: message,
                 history: conversationHistory.slice(-10), // Last 10 messages for context
                 lang: currentLang
-            })
+            }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -69,6 +75,11 @@ async function sendMessage(message) {
 
         // Display assistant message
         displayMessage(data.response, 'assistant');
+
+        // Limit history to last 20 messages to prevent memory growth
+        if (conversationHistory.length > 20) {
+            conversationHistory = conversationHistory.slice(-20);
+        }
 
         // Si se debe generar PDF, mostrar indicador de carga
         if (data.generate_pdf && data.pdf_url) {
@@ -120,9 +131,21 @@ function displayMessage(content, role) {
 }
 
 /**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
  * Format message with basic markdown support
  */
 function formatMessage(text) {
+    // Escape HTML first to prevent XSS
+    text = escapeHtml(text);
+
     // Split into paragraphs
     const paragraphs = text.split('\n\n');
 
@@ -182,19 +205,35 @@ function displayPDFDownloadLink(pdfUrl) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message message-assistant message-pdf';
 
+    // Validate pdfUrl starts with expected path
+    if (!pdfUrl.startsWith('/download-proposal/')) {
+        console.error('Invalid PDF URL received');
+        return;
+    }
+
     const downloadLink = `${API_URL}${pdfUrl}`;
 
-    messageDiv.innerHTML = `
-        <p>✅ <strong>${window.i18n.t('pdfReady')}</strong></p>
-        <a href="${downloadLink}" class="pdf-download-button" target="_blank" download>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    // Build DOM elements instead of innerHTML to prevent XSS
+    const p = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = window.i18n.t('pdfReady');
+    p.textContent = '\u2705 ';
+    p.appendChild(strong);
+
+    const a = document.createElement('a');
+    a.href = downloadLink;
+    a.className = 'pdf-download-button';
+    a.target = '_blank';
+    a.download = '';
+    a.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            ${window.i18n.t('pdfDownload')}
-        </a>
-    `;
+            </svg>`;
+    a.appendChild(document.createTextNode(' ' + window.i18n.t('pdfDownload')));
+
+    messageDiv.appendChild(p);
+    messageDiv.appendChild(a);
 
     chatMessages.appendChild(messageDiv);
     scrollToBottom();
