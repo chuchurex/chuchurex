@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frankenstein - Guía completa para control de lectura</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=UnifrakturCook:wght@700&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #ede4d1;
+    --paper-dark: #d9cdb1;
+    --ink: #1a1612;
+    --ink-soft: #3d342a;
+    --blood: #6b1a13;
+    --shadow: rgba(26, 22, 18, 0.18);
+    --highlight: #f5ecd6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    background-image:
+      radial-gradient(ellipse at top left, rgba(107, 26, 19, 0.06), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(26, 22, 18, 0.08), transparent 60%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 0 0.06 0 0 0 0.12 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    color: var(--ink);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.7;
+    min-height: 100vh;
+    padding: 4vw 2vw;
+  }
+
+  .frame {
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--paper);
+    background-image:
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.05 0 0 0 0 0.03 0 0 0 0 0.02 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    padding: clamp(2rem, 6vw, 5rem) clamp(1.5rem, 5vw, 4rem);
+    box-shadow:
+      0 0 0 1px var(--paper-dark),
+      0 2px 8px var(--shadow),
+      0 30px 80px -20px rgba(26, 22, 18, 0.35);
+    position: relative;
+  }
+
+  .frame::before, .frame::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 1px;
+    background: var(--ink-soft);
+  }
+  .frame::before { top: 1.5rem; }
+  .frame::after { bottom: 1.5rem; }
+
+  header {
+    text-align: center;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--paper-dark);
+    margin-bottom: 2.5rem;
+  }
+
+  .eyebrow {
+    font-size: 0.72rem;
+    letter-spacing: 0.45em;
+    text-transform: uppercase;
+    color: var(--blood);
+    margin-bottom: 1.2rem;
+    font-weight: 500;
+  }
+
+  h1 {
+    font-family: 'UnifrakturCook', serif;
+    font-size: clamp(2.6rem, 7vw, 4.2rem);
+    font-weight: 700;
+    line-height: 0.95;
+    color: var(--ink);
+    margin-bottom: 0.8rem;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    font-style: italic;
+    color: var(--ink-soft);
+  }
+
+  .meta {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1.2rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .meta span { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .meta .dot { color: var(--blood); }
+
+  /* Tabla de contenidos */
+  .toc {
+    background: var(--highlight);
+    border: 1px solid var(--paper-dark);
+    padding: 1.5rem 2rem;
+    margin: 2.5rem 0;
+  }
+  .toc-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.8rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--blood);
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+  .toc ol {
+    list-style: none;
+    counter-reset: toc;
+    columns: 2;
+    column-gap: 2rem;
+  }
+  .toc li {
+    counter-increment: toc;
+    padding: 0.3rem 0;
+    font-size: 0.95rem;
+    break-inside: avoid;
+  }
+  .toc li::before {
+    content: counter(toc, decimal-leading-zero) ".";
+    color: var(--blood);
+    font-weight: 600;
+    margin-right: 0.5rem;
+  }
+  .toc a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--ink-soft);
+  }
+  .toc a:hover { color: var(--blood); border-bottom-color: var(--blood); }
+
+  article p {
+    margin-bottom: 1.1rem;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.7rem;
+    font-weight: 600;
+    font-style: italic;
+    color: var(--ink);
+    margin: 3rem 0 1.2rem;
+    letter-spacing: -0.005em;
+    scroll-margin-top: 1rem;
+  }
+  h2::before {
+    content: '§ ';
+    color: var(--blood);
+    font-style: normal;
+  }
+
+  h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 1.8rem 0 0.6rem;
+  }
+
+  blockquote {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.2rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    border-left: 2px solid var(--blood);
+    padding: 0.5rem 0 0.5rem 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .ornament {
+    text-align: center;
+    margin: 2.5rem 0 1.5rem;
+    color: var(--blood);
+    font-size: 1.4rem;
+    letter-spacing: 0.5em;
+  }
+
+  /* Cards de personajes */
+  .characters {
+    display: grid;
+    gap: 0.8rem;
+    margin: 1rem 0;
+  }
+  .character {
+    border-left: 2px solid var(--blood);
+    padding: 0.6rem 0 0.6rem 1.2rem;
+  }
+  .character-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--ink);
+  }
+  .character-role {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--blood);
+    margin-left: 0.6rem;
+  }
+  .character p { margin: 0.3rem 0 0; font-size: 0.96rem; }
+
+  /* Bloque destacado */
+  .key-box {
+    background: var(--highlight);
+    border: 1px solid var(--paper-dark);
+    padding: 1.2rem 1.5rem;
+    margin: 1.5rem 0;
+    font-size: 0.96rem;
+  }
+  .key-box-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--blood);
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+  }
+
+  /* Q&A */
+  .qa { margin: 1rem 0; }
+  .qa-item {
+    border-bottom: 1px solid var(--paper-dark);
+    padding: 1rem 0;
+  }
+  .qa-q {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--ink);
+    margin-bottom: 0.4rem;
+  }
+  .qa-q::before { content: 'P. '; color: var(--blood); }
+  .qa-a { font-size: 0.96rem; }
+  .qa-a::before { content: 'R. '; color: var(--blood); font-weight: 600; }
+
+  ul.clean {
+    list-style: none;
+    margin: 0.8rem 0;
+  }
+  ul.clean li {
+    padding: 0.3rem 0 0.3rem 1.2rem;
+    position: relative;
+  }
+  ul.clean li::before {
+    content: '◆';
+    color: var(--blood);
+    position: absolute;
+    left: 0;
+    font-size: 0.7rem;
+    top: 0.55rem;
+  }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--paper-dark);
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  footer strong {
+    font-style: normal;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  ::selection {
+    background: var(--blood);
+    color: var(--paper);
+  }
+
+  @media (max-width: 600px) {
+    body { font-size: 17px; padding: 2vw 0; }
+    .frame { box-shadow: none; padding: 2rem 1.3rem; }
+    .toc ol { columns: 1; }
+    h1 { font-size: 2.4rem; }
+  }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .frame { box-shadow: none; max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<main class="frame">
+  <header>
+    <div class="eyebrow">Guía para control de lectura</div>
+    <h1>Frankenstein</h1>
+    <p class="subtitle">o el moderno Prometeo - Mary Shelley, 1818</p>
+    <div class="meta">
+      <span><span class="dot">◆</span> Resumen completo</span>
+      <span><span class="dot">◆</span> 15-20 min</span>
+    </div>
+  </header>
+
+  <article>
+
+    <nav class="toc">
+      <div class="toc-title">Contenido</div>
+      <ol>
+        <li><a href="#contexto">Sobre el libro y la autora</a></li>
+        <li><a href="#estructura">Cómo está escrito</a></li>
+        <li><a href="#personajes">Los personajes</a></li>
+        <li><a href="#parte1">Parte I - Walton y el Ártico</a></li>
+        <li><a href="#parte2">Parte II - La infancia de Victor</a></li>
+        <li><a href="#parte3">Parte III - La creación</a></li>
+        <li><a href="#parte4">Parte IV - Las primeras muertes</a></li>
+        <li><a href="#parte5">Parte V - El monstruo habla</a></li>
+        <li><a href="#parte6">Parte VI - El trato y la traición</a></li>
+        <li><a href="#parte7">Parte VII - La venganza</a></li>
+        <li><a href="#parte8">Parte VIII - El final</a></li>
+        <li><a href="#temas">Temas principales</a></li>
+        <li><a href="#simbolos">Símbolos importantes</a></li>
+        <li><a href="#preguntas">Posibles preguntas del control</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="contexto">Sobre el libro y la autora</h2>
+
+    <p>Frankenstein lo escribió Mary Shelley cuando tenía solo 18 años. Se publicó en 1818 sin firma, porque era raro que una mujer escribiera novelas en esa época. Recién en 1831 salió una segunda edición con el nombre de Mary.</p>
+
+    <p>La idea le vino en el verano de 1816 en una casa al lado del lago de Ginebra (Suiza), donde estaba con su pareja, el poeta Percy Shelley, y con otros escritores famosos como Lord Byron. Ese verano fue tan frío y lluvioso que se quedaron encerrados, y Lord Byron propuso un juego: cada uno tenía que escribir una historia de terror. La de Mary fue Frankenstein.</p>
+
+    <p>El libro se considera la primera novela de ciencia ficción de la historia, porque mezcla terror con ciencia. No es magia lo que da vida al monstruo: es química y electricidad. Eso era nuevo en la literatura.</p>
+
+    <p>El título completo es <em>Frankenstein o el moderno Prometeo</em>. Prometeo es un personaje de la mitología griega que robó el fuego a los dioses para dárselo a los humanos, y por eso fue castigado para siempre. La comparación es clara: Victor Frankenstein también roba algo que no le correspondía (el secreto de la vida) y también termina castigado.</p>
+
+    <div class="key-box">
+      <div class="key-box-title">Dato importante para la prueba</div>
+      Frankenstein es el apellido del científico, no del monstruo. El monstruo nunca tiene nombre en todo el libro. La gente confunde esto, pero confundirlo en una prueba es un error clásico.
+    </div>
+
+    <h2 id="estructura">Cómo está escrito</h2>
+
+    <p>El libro está escrito como una serie de cartas. Es lo que se llama una novela en formato de cartas: alguien le escribe a otra persona y a través de esas cartas se cuenta toda la historia.</p>
+
+    <p>El capitán Robert Walton le escribe cartas a su hermana Margaret Saville desde su barco en el Ártico. En esas cartas le cuenta lo que está viviendo, y también le cuenta lo que Victor Frankenstein le contó a él.</p>
+
+    <p>O sea: hay tres capas de narración, una dentro de la otra:</p>
+
+    <ul class="clean">
+      <li>Walton le cuenta a su hermana lo que Victor le contó.</li>
+      <li>Victor le cuenta a Walton su vida.</li>
+      <li>El monstruo le cuenta a Victor lo que él vivió cuando estuvo solo.</li>
+    </ul>
+
+    <p>Es como una caja dentro de otra caja dentro de otra caja. Esta estructura se llama <strong>narración enmarcada</strong>. Es un detalle típico que se pregunta en los controles.</p>
+
+    <h2 id="personajes">Los personajes</h2>
+
+    <div class="characters">
+      <div class="character">
+        <span class="character-name">Victor Frankenstein</span>
+        <span class="character-role">protagonista</span>
+        <p>Joven científico de Ginebra, Suiza. Inteligente, ambicioso, obsesivo. Crea al monstruo y luego lo abandona. Ese es su gran error y la causa de toda la tragedia.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">La criatura / el monstruo</span>
+        <span class="character-role">antagonista</span>
+        <p>El ser que Victor crea. Mide más de 2 metros, es horrible de ver, pero al principio es bueno e inocente. Se vuelve violento porque todos lo rechazan, incluso su propio creador. Aprende solo a hablar, leer y razonar. Nunca tiene nombre.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">Robert Walton</span>
+        <span class="character-role">narrador inicial</span>
+        <p>Capitán inglés que va al polo norte. Ambicioso como Victor. Es quien rescata a Victor en el hielo y escribe las cartas que conforman el libro.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">Elizabeth Lavenza</span>
+        <span class="character-role">prima y prometida de Victor</span>
+        <p>Adoptada por la familia Frankenstein cuando era niña. Buena, dulce, paciente. Es asesinada por el monstruo la noche de su boda con Victor.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">Henry Clerval</span>
+        <span class="character-role">mejor amigo de Victor</span>
+        <p>Cariñoso, optimista, amante de la poesía y los viajes. Cuida a Victor cuando se enferma. El monstruo lo asesina en una playa de Irlanda.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">William Frankenstein</span>
+        <span class="character-role">hermano menor</span>
+        <p>Niño pequeño. Es la primera víctima del monstruo, asesinado en un bosque cerca de Ginebra.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">Justine Moritz</span>
+        <span class="character-role">empleada de la familia</span>
+        <p>Casi parte de la familia. Es acusada falsamente de matar a William porque el monstruo le plantó pruebas. La condenan y ejecutan injustamente.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">Alphonse Frankenstein</span>
+        <span class="character-role">padre de Victor</span>
+        <p>Hombre bueno y respetado en Ginebra. Muere de tristeza después de la muerte de Elizabeth.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">Familia De Lacey</span>
+        <span class="character-role">vecinos del monstruo</span>
+        <p>Una familia francesa pobre que vive en una cabaña. El monstruo los espía durante meses y aprende a hablar viéndolos. El padre Felix, su hermana Agatha y el padre ciego.</p>
+      </div>
+
+      <div class="character">
+        <span class="character-name">Profesor Waldman</span>
+        <span class="character-role">profesor universitario</span>
+        <p>Le enseña química moderna a Victor en la universidad de Ingolstadt. Es quien lo motiva a estudiar las ciencias serias.</p>
+      </div>
+    </div>
+
+    <div class="ornament">· · ·</div>
+
+    <h2 id="parte1">Parte I - Walton y el Ártico</h2>
+
+    <p>El libro empieza con cuatro cartas del capitán Robert Walton a su hermana Margaret. Walton es un inglés rico que decidió usar su fortuna en una expedición al polo norte. Quiere ser el primero en llegar y descubrir nuevos territorios. Está obsesionado con la fama y el conocimiento, igual que Victor, aunque todavía no lo sabe.</p>
+
+    <p>El barco queda atascado entre los hielos. Una mañana, la tripulación ve algo extraño en la lejanía: una figura enorme cruzando el hielo en un trineo tirado por perros. Al día siguiente, encuentran a otro hombre cerca del barco, casi muerto de frío, agotado. Lo suben y lo cuidan. Es Victor Frankenstein.</p>
+
+    <p>Cuando Victor se recupera un poco, le pregunta a Walton si vio una figura en el hielo. Walton dice que sí. Victor entonces decide contarle toda su historia, como advertencia: para que Walton entienda los peligros de buscar conocimiento sin pensar en las consecuencias. Todo lo que sigue en el libro es lo que Victor le cuenta a Walton.</p>
+
+    <h2 id="parte2">Parte II - La infancia de Victor</h2>
+
+    <p>Victor nace en una familia rica de Ginebra, Suiza. Sus padres son Alphonse y Caroline. Cuando Victor tiene unos años, sus padres adoptan a Elizabeth Lavenza, una niña bellísima cuya madre murió. Crecen como hermanos pero todos saben que algún día se van a casar.</p>
+
+    <p>Después nace Ernest, su segundo hermano, y mucho más tarde William, el hermano menor. Su mejor amigo desde la infancia es Henry Clerval, un chico más cariñoso y soñador que Victor.</p>
+
+    <p>De niño, Victor encuentra unos libros viejos de ciencia rara, escritos cientos de años atrás por hombres que mezclaban ciencia y magia. Esos libros lo obsesionan. Hablaban de cómo encontrar la fórmula para vivir para siempre y para crear oro. Aunque su padre le dice que son tonterías, Victor sigue leyéndolos en secreto.</p>
+
+    <p>Cuando Victor tiene 17 años, su madre muere de fiebre escarlata cuidando a Elizabeth, que se había enfermado. Antes de morir, su madre les pide que se casen algún día. Esa muerte marca a Victor para siempre. Ahí empieza su obsesión con derrotar a la muerte.</p>
+
+    <p>Poco después, lo mandan a estudiar a Ingolstadt, una ciudad universitaria de Alemania. En la universidad, dos profesores lo cambian: uno le dice que los libros viejos que leía son basura, pero el otro, el profesor Waldman, le explica que la ciencia moderna en realidad sí está logrando cosas increíbles. Le dice que los científicos modernos "han hecho milagros". Victor decide entregarse a la ciencia con todo.</p>
+
+    <h2 id="parte3">Parte III - La creación</h2>
+
+    <p>Victor estudia día y noche durante dos años. Sobresale en química, anatomía y biología. Una idea lo obsesiona cada vez más: ¿se podría crear vida desde cero? ¿Se podría armar un cuerpo y darle vida?</p>
+
+    <p>Empieza a trabajar en secreto. Pasa meses en cementerios y en salas donde diseccionan cadáveres. Junta partes de cuerpos muertos. Su salud se va al piso, no come ni duerme bien, no contesta las cartas de su familia. Está totalmente perdido en su obsesión.</p>
+
+    <p>Decide que el cuerpo va a ser enorme, gigante, porque trabajar con partes pequeñas era muy difícil. Lo arma con piezas de unos 2 metros y medio de altura. Y una noche de noviembre, después de meses de trabajo, lo logra. Le da vida.</p>
+
+    <p>Pero apenas la criatura abre los ojos, Victor se aterra. El cuerpo que hizo es horrible: piel amarilla y tirante, ojos acuosos, labios negros. Sale corriendo de su laboratorio.</p>
+
+    <blockquote>"La belleza del sueño se desvaneció, y un horror sin aliento llenó mi corazón."</blockquote>
+
+    <p>Cuando Victor vuelve al día siguiente, la criatura ya no está. Se fue sola al mundo, sin saber nada, sin nombre, sin nadie que le explicara qué era ni qué pasaba.</p>
+
+    <p>Justo entonces aparece Henry Clerval en la universidad. Encuentra a Victor enfermo de los nervios y lo cuida durante meses hasta que se recupera. Victor no le cuenta a nadie lo que hizo.</p>
+
+    <h2 id="parte4">Parte IV - Las primeras muertes</h2>
+
+    <p>Cuando Victor está mejor, recibe una carta horrible de su padre: su hermano menor William fue asesinado en un bosque cerca de Ginebra. Lo encontraron estrangulado y le faltaba un medallón con la foto de su madre.</p>
+
+    <p>Victor vuelve a Ginebra inmediatamente. Una noche, mientras pasea cerca del lugar del crimen bajo una tormenta, ve algo entre los árboles iluminado por un relámpago: la criatura. En ese segundo entiende que el monstruo que él creó mató a su hermano. Pero no se atreve a decir nada, porque ¿quién le va a creer una historia tan loca?</p>
+
+    <p>En la casa de su familia se encuentra con una noticia peor: arrestaron a Justine Moritz, la empleada que vivía con ellos como una hija más. Encontraron el medallón de William en su ropa. Aunque Justine es inocente, en el juicio la encuentran culpable. Termina firmando una confesión falsa porque el cura le dice que si no confiesa va a ir al infierno. La condenan a muerte y la ejecutan.</p>
+
+    <p>Victor sabe la verdad pero calla. La culpa lo destruye por dentro. Han muerto dos personas inocentes por su creación.</p>
+
+    <h2 id="parte5">Parte V - El monstruo habla</h2>
+
+    <p>Victor se va solo a las montañas a tratar de calmarse. Sube hasta un glaciar entre los Alpes. Y ahí, en medio del hielo, aparece su criatura. Por primera vez le habla. Y por primera vez Victor escucha lo que tiene para decir.</p>
+
+    <p>Esta es una de las partes más importantes del libro. Acá el monstruo cuenta toda su historia desde que huyó del laboratorio. Es la única vez que tenemos su versión.</p>
+
+    <h3>Los primeros días del monstruo</h3>
+
+    <p>Cuando huyó del laboratorio, no sabía nada. No entendía qué era el frío, qué era el hambre, qué era el fuego. Tuvo que aprender todo solo, como un bebé recién nacido pero con cuerpo de adulto. Cada vez que se acercaba a una persona, lo atacaban con palos y piedras por su aspecto. Aprendió rápido a esconderse.</p>
+
+    <h3>La cabaña de los De Lacey</h3>
+
+    <p>Después de mucho caminar, encontró un cobertizo pegado a una cabaña pobre en medio del campo. Se metió ahí a esconderse. En la cabaña vivía la familia De Lacey: un padre ciego, sus dos hijos jóvenes Felix y Agatha, y más adelante llega Safie, una chica turca que es la novia de Felix.</p>
+
+    <p>Durante meses, el monstruo los espió a través de un agujero en la pared. Los vio reír, llorar, pelear, perdonarse. Aprendió a hablar escuchándolos. Aprendió a leer cuando Felix le enseñaba a Safie a leer en francés, y el monstruo aprendía con ella desde su escondite. Por las noches, en secreto, también leía libros que encontraba.</p>
+
+    <p>Tres libros lo marcaron mucho:</p>
+
+    <ul class="clean">
+      <li><strong>El paraíso perdido</strong> (Milton): la historia bíblica de Adán y Eva. El monstruo se compara con Adán pero también con Satanás, porque siente que fue creado y luego abandonado.</li>
+      <li><strong>Vidas paralelas</strong> (Plutarco): le enseña sobre los héroes y los grandes hombres del pasado.</li>
+      <li><strong>Las desventuras del joven Werther</strong> (Goethe): le enseña sobre el amor, la tristeza y el suicidio.</li>
+    </ul>
+
+    <p>También encontró en un bolsillo del abrigo que se llevó del laboratorio el diario de Victor. Ahí leyó cómo fue creado y cómo su propio creador lo describió como un horror. Ese fue un golpe muy duro.</p>
+
+    <h3>El rechazo definitivo</h3>
+
+    <p>El monstruo llegó a querer a la familia De Lacey como si fuera la suya. Los ayudaba en secreto: les juntaba leña por las noches. Decidió que algún día iba a presentarse y pedirles ser parte de su vida.</p>
+
+    <p>Eligió un día en que los hijos no estaban y solo quedaba el padre, que era ciego. Pensó que si el ciego lo escuchaba hablar primero, antes de verlo (o que lo tocaran), iba a entender que era buena persona. Funcionó. El padre lo escuchó con cariño durante minutos. Pero entonces los hijos volvieron, vieron al monstruo enorme cerca del padre y, asumiendo lo peor, lo atacaron a golpes. La familia se mudó al día siguiente, asustada.</p>
+
+    <p>Ahí el monstruo perdió toda esperanza. Quemó la cabaña vacía y juró odiar a los humanos para siempre, especialmente a su creador.</p>
+
+    <h3>La muerte de William</h3>
+
+    <p>Caminando hacia Ginebra a buscar a Victor, el monstruo se cruzó con un niño solo en un bosque. Pensó que tal vez un niño todavía no tendría prejuicios y podría ser su amigo. Pero cuando le habló, el niño gritó horrorizado y le dijo "mi padre es un Frankenstein". Al escuchar ese apellido, el monstruo lo estranguló de pura rabia. Le sacó el medallón. Cuando vio a Justine durmiendo en un granero, le metió el medallón en el bolsillo para que la culparan a ella. Quería hacer sufrir al mundo entero.</p>
+
+    <h3>La petición</h3>
+
+    <p>Después de contar todo eso, el monstruo le pide a Victor una sola cosa: que le cree una compañera. Otra criatura como él, igual de fea y rechazada por los humanos. Si Victor lo hace, los dos van a huir a las selvas de Sudamérica y nunca más se va a saber nada de ellos. Si no lo hace, la venganza del monstruo va a ser total.</p>
+
+    <p>Victor, después de mucho dudar, acepta.</p>
+
+    <h2 id="parte6">Parte VI - El trato y la traición</h2>
+
+    <p>Victor necesita libros y materiales nuevos para crear la segunda criatura. Para hacerlo en secreto, viaja con su amigo Henry Clerval primero a Inglaterra. Después se separa de Henry y se va solo a una isla apartada en el norte de Escocia, en las islas Orcadas, donde alquila una choza para trabajar.</p>
+
+    <p>Pasa meses ahí, juntando partes y armando el segundo cuerpo, con el monstruo siguiéndolo de cerca para asegurarse de que cumpla. Pero cuando está casi por terminar, le entra el pánico. Empieza a pensar:</p>
+
+    <ul class="clean">
+      <li>¿Y si los dos monstruos tienen hijos y se forma una raza nueva?</li>
+      <li>¿Y si la nueva criatura es peor que el monstruo original?</li>
+      <li>¿Y si ella no quiere irse a Sudamérica?</li>
+      <li>¿Y si los dos juntos destruyen a la humanidad?</li>
+    </ul>
+
+    <p>Una noche, el monstruo lo está mirando por la ventana. Victor lo ve. Y en ese momento, decide romper el segundo cuerpo en pedazos delante de él. La traición es total. El monstruo, fuera de sí, le grita una sola frase que se va a cumplir literalmente:</p>
+
+    <blockquote>"Estaré contigo en tu noche de bodas."</blockquote>
+
+    <p>Victor entiende esa frase como una amenaza contra él mismo. No piensa que el monstruo pueda querer algo peor. Ese es otro de sus errores.</p>
+
+    <p>Esa misma noche, Victor mete los pedazos del segundo cuerpo en una bolsa con piedras y los tira al mar. Cuando intenta volver a tierra, las corrientes lo arrastran a una costa desconocida. Lo arrestan acusado de un asesinato que acaba de pasar ahí. Cuando le muestran el cuerpo de la víctima para identificarlo, Victor se desmaya: es Henry Clerval, su mejor amigo. El monstruo lo mató esa noche.</p>
+
+    <p>Victor pasa meses preso y enfermo, hasta que su padre llega a buscarlo y un juicio prueba que él estaba en otra isla cuando Henry fue asesinado. Lo liberan y vuelven a Ginebra.</p>
+
+    <h2 id="parte7">Parte VII - La venganza</h2>
+
+    <p>Victor llega a Ginebra hecho un fantasma. Su padre le insiste en que se case ya con Elizabeth, como su madre quería antes de morir, para que pueda tener algo de paz. Victor acepta, pero tiene un mal presentimiento: la frase del monstruo "estaré contigo en tu noche de bodas" sigue dando vueltas.</p>
+
+    <p>Sigue pensando que el monstruo va a atacarlo a él. La noche de la boda, después de la fiesta, viajan a una posada al lado del lago. Victor, paranoico, sale a buscar al monstruo con una pistola. Mientras tanto, escucha un grito desde la habitación.</p>
+
+    <p>Corre. Encuentra a Elizabeth muerta sobre la cama, con las marcas de las manos del monstruo en el cuello. El monstruo nunca quiso matarlo a él: quería destruir todo lo que él amaba. Por la ventana, Victor lo ve sonriéndole y señalando el cuerpo de Elizabeth, como diciéndole "aquí está mi venganza". Después huye.</p>
+
+    <p>El padre de Victor no soporta la noticia. Muere de tristeza pocos días después. Victor se queda solo en el mundo. Su madre, su hermano William, Justine, Henry, Elizabeth y su padre: todos muertos por culpa de su creación.</p>
+
+    <h2 id="parte8">Parte VIII - El final</h2>
+
+    <p>Victor decide dedicar lo que le queda de vida a perseguir al monstruo y matarlo. Lo persigue por toda Europa, por Rusia, hasta llegar al Ártico helado. El monstruo le va dejando comida y mensajes escritos en piedras y troncos para que no muera de hambre. Quiere mantenerlo vivo lo más posible para alargar su sufrimiento.</p>
+
+    <p>Y ahí volvemos al principio del libro. Victor sigue al monstruo en un trineo cruzando el hielo del Ártico, cuando el hielo se rompe debajo de él y queda flotando en un pedazo. Es el momento en que el barco de Walton lo encuentra.</p>
+
+    <p>Victor termina de contarle todo a Walton en el barco congelado. Le hace prometer que si lo encuentra, mate al monstruo. Después se muere.</p>
+
+    <p>Esa misma noche, Walton escucha un ruido raro en el camarote donde está el cuerpo de Victor. Entra y ve algo terrible: el monstruo, enorme y feo, está llorando sobre el cuerpo de su creador.</p>
+
+    <p>El monstruo le habla a Walton. Le dice que su odio se terminó con la muerte de Victor. Que toda su vida fue puro sufrimiento. Que mató por venganza pero que cada muerte lo dejaba más vacío que la anterior. Que ahora lo único que le queda es desaparecer. Le dice que va a viajar al fin del mundo, que va a juntar madera, que va a hacer una hoguera y que se va a quemar a sí mismo para que nadie nunca más sepa de él ni de su raza. Salta del barco a un trozo de hielo y se pierde en la oscuridad del Ártico. No vemos su muerte: el libro nos deja con la duda.</p>
+
+    <p>Walton, asustado por todo lo que vivió, decide hacer caso a las advertencias de Victor y volver a Inglaterra. Renuncia a su sueño del polo norte. Su última carta a su hermana cuenta el final.</p>
+
+    <div class="ornament">· · ·</div>
+
+    <h2 id="temas">Temas principales</h2>
+
+    <h3>1. El peligro del conocimiento sin ética</h3>
+    <p>Victor logra crear vida pero nunca se pregunta si <em>debe</em> hacerlo. La ciencia sin pensar en las consecuencias destruye todo lo que ama. La novela no está contra la ciencia: está contra la ambición sin responsabilidad.</p>
+
+    <h3>2. La responsabilidad del creador</h3>
+    <p>Cuando creas algo, te haces responsable de eso. Victor abandona a su criatura apenas la ve. Si la hubiera cuidado, educado, querido, el monstruo no se habría vuelto malo. La maldad no nace, se construye con el rechazo.</p>
+
+    <h3>3. La soledad y el rechazo</h3>
+    <p>El monstruo no quiere matar. Quiere ser querido. Pero todos lo rechazan por su aspecto, incluso su creador. La soledad lo transforma en lo que todos creen que es. Es una crítica a juzgar por las apariencias.</p>
+
+    <h3>4. La naturaleza como refugio y como espejo</h3>
+    <p>Cuando Victor está mal, sube a las montañas o navega lagos. La naturaleza salvaje (Alpes, Ártico, tormentas) refleja sus emociones. Esto se llama estética del sublime y es típico del Romanticismo.</p>
+
+    <h3>5. El doble (Victor y el monstruo)</h3>
+    <p>Victor y el monstruo son dos caras de lo mismo. El monstruo hace lo que Victor no se atreve. Cuando Victor pierde todo, persigue al monstruo y se vuelve igual de obsesivo. Al final son inseparables: cuando uno muere, el otro también desaparece.</p>
+
+    <h3>6. La paternidad y el abandono</h3>
+    <p>Victor es como un padre que abandona a su hijo apenas nace. El libro pregunta: ¿quién es el verdadero monstruo, el creado o el que abandonó?</p>
+
+    <h2 id="simbolos">Símbolos importantes</h2>
+
+    <ul class="clean">
+      <li><strong>El fuego.</strong> El monstruo descubre el fuego al principio: lo atrae el calor pero le quema la mano. Es como el conocimiento mismo: bueno y peligroso a la vez. Conecta con el subtítulo "el moderno Prometeo".</li>
+      <li><strong>El hielo y el Ártico.</strong> Donde empieza y termina el libro. Representa la soledad absoluta, la muerte, los lugares a los que lleva la ambición sin límites.</li>
+      <li><strong>La luz y la oscuridad.</strong> La luz aparece muchas veces como conocimiento (la "chispa" de la vida, los relámpagos). Pero la oscuridad la rodea siempre.</li>
+      <li><strong>El relámpago.</strong> Victor ve por primera vez al monstruo asesino bajo un relámpago. La electricidad se asocia con la creación de vida y con la revelación de la verdad.</li>
+      <li><strong>Los ojos del monstruo.</strong> "Acuosos amarillos". Lo primero que ve Victor cuando le da vida. Para él representan el horror. Para el monstruo, son la mirada de alguien que solo busca ser visto.</li>
+      <li><strong>El medallón de William.</strong> Símbolo de la familia perdida y de la primera traición del monstruo (incriminar a Justine).</li>
+    </ul>
+
+    <h2 id="preguntas">Posibles preguntas del control</h2>
+
+    <div class="qa">
+
+      <div class="qa-item">
+        <div class="qa-q">¿Quién escribió Frankenstein y en qué año?</div>
+        <div class="qa-a">Mary Shelley, publicada en 1818. Tenía 18 años cuando empezó a escribirla.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Cómo está estructurada la novela?</div>
+        <div class="qa-a">Es una novela en cartas (formato de cartas). El capitán Walton le escribe a su hermana Margaret y dentro de esas cartas está la historia de Victor, y dentro de esa historia está el relato del monstruo. Son tres niveles de narración (narración enmarcada).</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Cuál es el subtítulo del libro y qué significa?</div>
+        <div class="qa-a">"El moderno Prometeo". Prometeo es el titán griego que robó el fuego a los dioses para los humanos y fue castigado eternamente. Compara a Victor con Prometeo: también roba un secreto de los dioses (la vida) y también es castigado.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Cuál es el verdadero nombre del monstruo?</div>
+        <div class="qa-a">El monstruo no tiene nombre. Frankenstein es el apellido del científico, no de la criatura. Es uno de los errores más comunes.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Por qué Victor crea al monstruo?</div>
+        <div class="qa-a">Por ambición de conocimiento, por querer derrotar a la muerte (después de perder a su madre) y por la influencia de los libros que leía de chico. Quiere ser el primero en crear vida.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Qué hace Victor justo después de crear al monstruo?</div>
+        <div class="qa-a">Se aterra de su aspecto y huye del laboratorio. Lo abandona. Ese es su error central.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Quiénes son las víctimas del monstruo?</div>
+        <div class="qa-a">William (hermano menor de Victor), Justine (acusada falsamente y ejecutada por su crimen), Henry Clerval (mejor amigo de Victor) y Elizabeth (esposa de Victor). El padre de Victor también muere de tristeza.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Cómo aprende a hablar el monstruo?</div>
+        <div class="qa-a">Espiando a la familia De Lacey desde un cobertizo durante meses. Aprende francés escuchando cuando Felix le enseñaba a Safie a leer.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Qué libros lee el monstruo y por qué importan?</div>
+        <div class="qa-a">El paraíso perdido (Milton), Vidas paralelas (Plutarco) y Las desventuras del joven Werther (Goethe). Le enseñan sobre el bien, el mal, el amor y la condición humana. Se compara con Adán y con Satanás del Paraíso perdido.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Qué le pide el monstruo a Victor?</div>
+        <div class="qa-a">Que le cree una compañera de su misma especie. Promete que si lo hace, los dos van a desaparecer para siempre en las selvas de Sudamérica.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Por qué Victor destruye a la segunda criatura?</div>
+        <div class="qa-a">Le entra pánico de que los dos puedan tener hijos y crear una nueva raza que domine a los humanos. También teme que la nueva criatura no acepte el trato.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Qué frase amenaza dice el monstruo cuando ve que Victor destruye a su compañera?</div>
+        <div class="qa-a">"Estaré contigo en tu noche de bodas." Es una amenaza que se cumple, pero no como Victor pensaba. Mata a Elizabeth, no a Victor.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Cómo termina el libro?</div>
+        <div class="qa-a">Victor muere en el barco de Walton después de contar toda su historia. El monstruo aparece esa noche llorando sobre el cuerpo, le dice a Walton que va a quemarse a sí mismo en una hoguera y desaparece en el hielo. No vemos su muerte.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Qué aprende Walton al final?</div>
+        <div class="qa-a">Por la historia de Victor, decide abandonar su expedición al polo y volver. Aprende que la ambición sin límites puede destruir todo. Es lo único positivo del libro: alguien escucha la advertencia a tiempo.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Quién es el verdadero monstruo del libro?</div>
+        <div class="qa-a">Pregunta clásica con varias respuestas posibles. Lo más común y aceptado: Victor. Crea vida y la abandona, no asume responsabilidad, calla cuando ejecutan a una inocente, y termina convertido en el perseguidor obsesivo. La criatura nace inocente; los humanos la convierten en monstruo con su rechazo.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿A qué movimiento literario pertenece la novela?</div>
+        <div class="qa-a">Al Romanticismo, con elementos góticos y es considerada la primera novela de ciencia ficción. Tiene paisajes salvajes, emociones extremas, héroe atormentado, lo sublime de la naturaleza, todo típico del Romanticismo.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Dónde transcurre principalmente la historia?</div>
+        <div class="qa-a">Ginebra (Suiza), Ingolstadt (Alemania), los Alpes, Inglaterra, Escocia (islas Orcadas), Irlanda y el Ártico. La historia se mueve por toda Europa.</div>
+      </div>
+
+      <div class="qa-item">
+        <div class="qa-q">¿Por qué Justine confiesa un crimen que no cometió?</div>
+        <div class="qa-a">Un cura la presiona en la cárcel diciéndole que si no confiesa va a ir al infierno. Justine, religiosa y aterrada, firma. Es una crítica a la presión de la Iglesia y a una justicia injusta.</div>
+      </div>
+
+    </div>
+
+    <div class="key-box">
+      <div class="key-box-title">Consejo final</div>
+      Si en la prueba te preguntan algo abierto tipo "¿qué opinas del libro?", siempre conviene mencionar dos cosas: que el monstruo no nace malo sino que se vuelve malo por el rechazo, y que el libro plantea preguntas sobre la responsabilidad de los científicos que siguen siendo actuales hoy (clonación, inteligencia artificial, edición genética).
+    </div>
+
+  </article>
+
+  <footer>
+    <strong>Frankenstein o el moderno Prometeo</strong> · Mary Shelley · 1818<br>
+    Guía completa para control de lectura
+  </footer>
+</main>
+
+</body>
+</html>
