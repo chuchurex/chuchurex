@@ -46,3 +46,10 @@ proposals/*.md
 # Chat logs (beta)
 chats/*.json
 
+# Tooling locales
+.gstack/
+.claude/
+
+# Documentos de planificacion (locales)
+*.docx
+diseño/
