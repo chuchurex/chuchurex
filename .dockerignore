@@ -9,5 +9,4 @@ proposals/
 nic.cl/
 .git/
 CLAUDE.md
-deploy.sh
 dev.sh

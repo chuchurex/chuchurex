@@ -10,13 +10,13 @@ git add frontend/
 git commit -m "message"
 git push origin main
 
-# Changes in backend → Deploy script
-./deploy.sh
+# Changes in backend → Fly.io
+fly deploy
 ```
 
 ### 🎯 Golden Rule
 
-**Frontend = Git push | Backend = ./deploy.sh**
+**Frontend = Git push | Backend = fly deploy**
 
 ### 📚 Complete Documentation
 
@@ -27,16 +27,15 @@ git push origin main
 ### ⚠️ Common Mistakes to Avoid
 
 ❌ Don't use `rsync` or `scp` for frontend
-❌ Don't SSH to VPS for frontend
 ❌ Don't ask "how do I publish this?"
 
 ✅ Frontend always → `git push origin main`
-✅ Backend always → `./deploy.sh`
+✅ Backend always → `fly deploy`
 ✅ Deploy automatically when user requests it
 
 ### 🚀 When User Says:
 
-- "Publish" → Execute appropriate deploy (git push or ./deploy.sh)
+- "Publish" → Execute appropriate deploy (git push or fly deploy)
 - "Deploy" → Execute appropriate deploy
 - "Push to production" → Execute appropriate deploy
 
@@ -46,6 +45,6 @@ git push origin main
 
 **Hosting:**
 - Frontend: Cloudflare Pages (auto-deploy from GitHub)
-- Backend: Vultr VPS (deploy.sh handles SSH)
+- Backend: Fly.io (app `chuchurex-api`, region `gru`)
 
 **Infrastructure designed for you to deploy automatically.**
