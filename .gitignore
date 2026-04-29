@@ -50,6 +50,7 @@ chats/*.json
 .gstack/
 .claude/
 
-# Documentos de planificacion (locales)
+# Archivos personales (no van al repo)
+private/
 *.docx
 diseño/

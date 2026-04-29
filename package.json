@@ -1,17 +1,17 @@
 {
-  "name": "uman.ia",
+  "name": "chuchurex.cl",
   "version": "2.0.0",
-  "description": "Chatbot para cotización de proyectos web con IA + Generación de Propuestas PDF",
-  "main": "app_unified.py",
+  "description": "chuchurex.cl - Chatbot de cotizacion de proyectos web con IA + generacion de propuestas PDF",
+  "main": "backend/app.py",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "dev": "cd frontend && npx live-server --port=3007 --open",
-    "dev:backend": "cd backend && source .venv/bin/activate && uvicorn app_unified:app --reload --port 8002",
+    "dev:backend": "cd backend && source ../.venv/bin/activate && uvicorn app:app --reload --port 8002",
     "dev:frontend": "cd frontend && npx live-server --port=3007",
-    "pdf:install": "cd pdf-generator && npm install",
-    "pdf:test": "node pdf-generator/generate-pdf-api.js proposals/test.md proposals/test.pdf",
+    "pdf:install": "cd backend/pdf-generator && npm install",
+    "pdf:test": "node backend/pdf-generator/generate-pdf-api.js proposals/test.md proposals/test.pdf",
     "test": "echo \"Run: npm run pdf:test\" && exit 0"
   },
   "keywords": [

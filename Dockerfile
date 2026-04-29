@@ -17,18 +17,18 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 WORKDIR /app
 
 # Dependencias Python
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Dependencias Node (pdf-generator)
-COPY pdf-generator/package.json pdf-generator/package-lock.json pdf-generator/
+COPY backend/pdf-generator/package.json backend/pdf-generator/package-lock.json pdf-generator/
 RUN cd pdf-generator && npm ci --omit=dev
 
 # Codigo de la app
-COPY app_unified.py .
-COPY pdf-generator/generate-pdf-api.js pdf-generator/
+COPY backend/app.py .
+COPY backend/pdf-generator/generate-pdf-api.js pdf-generator/
 
 # Puerto
 EXPOSE 8080
 
-CMD ["uvicorn", "app_unified:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]

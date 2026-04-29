@@ -277,8 +277,10 @@ if (data.generate_pdf && data.pdf_url) {
 
 ## Estructura de Directorios
 
+En el container Fly.io (`/app`):
+
 ```
-/var/www/chuchurex-api/
+/app/
 ├── app.py                          # FastAPI backend
 ├── chats/                          # Conversaciones guardadas
 │   └── chat_YYYYMMDD_HHMMSS.json
@@ -286,11 +288,22 @@ if (data.generate_pdf && data.pdf_url) {
 │   ├── package.json
 │   ├── package-lock.json
 │   ├── node_modules/
-│   ├── generate-pdf-api.js         # Script principal
-│   └── generate-pdf.js             # Script de testing
+│   └── generate-pdf-api.js         # Script principal
 └── proposals/                      # PDFs generados
     ├── propuesta_cliente_YYYYMMDD_HHMMSS.md
     └── propuesta_cliente_YYYYMMDD_HHMMSS.pdf
+```
+
+En el repo local (build context):
+
+```
+backend/
+├── app.py
+├── requirements.txt
+└── pdf-generator/
+    ├── package.json
+    ├── package-lock.json
+    └── generate-pdf-api.js
 ```
 
 ## Estructura del PDF Generado
@@ -354,60 +367,24 @@ Agendemos una videollamada de 30 minutos para:
 *Este documento es una propuesta inicial basada en la conversación. Los detalles y funcionalidades pueden ajustarse según tus necesidades específicas.*
 ```
 
-## Instalación y Configuración
+## Instalacion y Configuracion
 
-### 1. Servidor (VPS Ubuntu 24.04)
+### Deploy en Fly.io
 
-```bash
-# Instalar Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt-get install -y nodejs
-
-# Instalar dependencias de Chrome para Puppeteer
-apt-get install -y \
-  libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
-  libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
-  libxfixes3 libxrandr2 libgbm1 libasound2t64 \
-  libpango-1.0-0 libcairo2 libatspi2.0-0
-
-# Crear directorios
-mkdir -p /var/www/chuchurex-api/pdf-generator
-mkdir -p /var/www/chuchurex-api/proposals
-
-# Instalar dependencias npm
-cd /var/www/chuchurex-api/pdf-generator
-npm install --save-dev puppeteer markdown-it
-
-# Reiniciar servicio
-systemctl restart chuchurex
-```
-
-### 2. Variables de Entorno
+El backend corre en un container construido desde `Dockerfile` (Python 3.13 + Node 20 + Chromium). Toda la instalacion de dependencias del sistema y de runtime esta en el `Dockerfile`.
 
 ```bash
-# /var/www/chuchurex-api/.env
-ANTHROPIC_API_KEY=sk-ant-xxxxx
+# Deploy
+fly deploy
+
+# Setear ANTHROPIC_API_KEY (requerido)
+fly secrets set ANTHROPIC_API_KEY=sk-ant-... -a chuchurex-api
+
+# Setear CHATS_ACCESS_KEY (para acceder al endpoint /chats)
+fly secrets set CHATS_ACCESS_KEY=tu-secret -a chuchurex-api
 ```
 
-### 3. Configuración de Servicio
-
-```ini
-# /etc/systemd/system/chuchurex.service
-[Unit]
-Description=Chuchurex API
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/var/www/chuchurex-api
-Environment="PATH=/var/www/chuchurex-api/venv/bin:/usr/local/bin:/usr/bin"
-ExecStart=/var/www/chuchurex-api/venv/bin/uvicorn app:app --host 127.0.0.1 --port 8002
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
+Configuracion en `fly.toml`. La maquina usa auto-stop con `min_machines_running = 0`, asi que la primera request despues de inactividad puede tardar ~2s en levantar.
 
 ## Endpoints de la API
 
@@ -510,18 +487,18 @@ curl "https://api.chuchurex.cl/chats?key=\${CHATS_ACCESS_KEY}"
 
 ### Ver logs del servicio
 ```bash
-journalctl -u chuchurex -f
+fly logs -a chuchurex-api
 ```
 
-### Test manual de PDF
+### Test manual de PDF (local)
 ```bash
-cd /var/www/chuchurex-api/pdf-generator
-node generate-pdf.js
+npm run pdf:test
 ```
 
-### Verificar PDFs generados
+### SSH a la maquina Fly y verificar PDFs
 ```bash
-ls -lh /var/www/chuchurex-api/proposals/
+fly ssh console -a chuchurex-api
+ls -lh /app/proposals/
 ```
 
 ## Limitaciones Conocidas

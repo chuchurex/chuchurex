@@ -18,65 +18,49 @@ Chatbot para cotización de proyectos web con IA.
 - Dominio: chuchurex.cl (Cloudflare DNS)
 
 ### Backend
-- FastAPI + Python
-- Claude API (Haiku)
-- Hospedado en Vultr VPS (Ubuntu 24.04)
+- FastAPI + Python 3.13
+- Claude API (Haiku para chat, Sonnet para PDFs)
+- Hospedado en Fly.io (app `chuchurex-api`, region `gru`)
+- Container con Chromium del sistema para Puppeteer
 
 ## Estructura del Proyecto
 
 ```
-uman.ia/
-├── frontend/
-│   ├── index.html          # Página principal con chat
-│   ├── privacidad.html     # Política de privacidad
-│   ├── _redirects          # Configuración Cloudflare Pages
-│   ├── styles/
-│   │   └── main.css        # Estilos (paleta crema + conchevino)
-│   └── js/
-│       └── app.js          # Lógica del chat
+chuchurex.cl/
 ├── backend/
-│   └── app.py              # API FastAPI (referencia local)
+│   ├── app.py              # API FastAPI principal
+│   ├── requirements.txt
+│   └── pdf-generator/      # Node + Puppeteer
+├── frontend/
+│   ├── index.html          # Pagina principal con chat
+│   ├── about.html, privacidad.html
+│   ├── styles/main.css
+│   └── js/app.js, i18n.js
+├── Dockerfile, fly.toml    # Deploy Fly.io
 └── README.md
 ```
 
-## Configuración del Servidor (VPS)
-
-### Archivos en el servidor
-
-```
-/var/www/chuchurex-api/
-├── app.py                  # API principal
-├── .env                    # ANTHROPIC_API_KEY
-├── chats/                  # Conversaciones guardadas (beta)
-└── venv/                   # Entorno virtual Python
-```
-
-### Acceder a los chats guardados
+## Acceder a los chats guardados
 
 Via web: `https://api.chuchurex.cl/chats?key=${CHATS_ACCESS_KEY}`
 
-O via SSH (ver credenciales en `.env`).
-
-### Servicios
-
-- **systemd**: `/etc/systemd/system/chuchurex.service`
-- **nginx**: `/etc/nginx/sites-available/chuchurex`
-- **SSL**: Let's Encrypt via certbot
-
-### Comandos útiles
+## Comandos utiles (Fly.io)
 
 ```bash
-# Conectar al servidor (ver VPS_HOST en .env)
-ssh ${VPS_USER}@${VPS_HOST}
+# Ver logs en vivo
+fly logs -a chuchurex-api
 
-# Reiniciar el servicio
-sudo systemctl restart chuchurex
+# Status
+fly status -a chuchurex-api
 
-# Ver logs
-sudo journalctl -u chuchurex -f
+# SSH a la maquina
+fly ssh console -a chuchurex-api
 
-# Estado del servicio
-sudo systemctl status chuchurex
+# Setear secret
+fly secrets set ANTHROPIC_API_KEY=sk-ant-... -a chuchurex-api
+
+# Deploy
+fly deploy
 ```
 
 ## Configuración del Chat (System Prompt)
@@ -109,29 +93,23 @@ El chatbot está configurado con las siguientes características:
 
 ## Deploy
 
-> **🤖 Para Claude Code:** Lee `.claude-instructions.md` o `DEPLOY.md` para instrucciones detalladas
+> **Para Claude Code:** ver `CLAUDE.md` o `DEPLOY.md`
 
 ### Frontend (Cloudflare Pages)
-El deploy es automático al hacer push a `main`:
+Deploy automatico al hacer push a `main`:
 
 ```bash
 git add frontend/
-git commit -m "descripción del cambio"
+git commit -m "descripcion del cambio"
 git push origin main
 ```
 
-**Cloudflare Pages despliega automáticamente en ~1 minuto**
-
-### Backend (VPS)
-Usar el script de deploy:
-
+### Backend (Fly.io)
 ```bash
-./deploy.sh
+fly deploy
 ```
 
-El script sube archivos vía SSH y reinicia el servicio automáticamente.
-
-**Documentación completa:** Ver `DEPLOY.md`
+**Documentacion completa:** ver `DEPLOY.md`
 
 ## Diseño
 
