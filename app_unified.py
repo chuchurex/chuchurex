@@ -666,6 +666,9 @@ async def chat(request: ChatRequest, req: Request):
             system=current_prompt,
             messages=messages
         )
+        if not response.content:
+            logger.error("Empty content array from Claude API in /chat")
+            raise HTTPException(status_code=502, detail="api_error")
         response_text = response.content[0].text
 
         save_chat(messages, response_text)
@@ -802,6 +805,9 @@ Agendemos una videollamada de 30 minutos para:
             messages=[{"role": "user", "content": analysis_prompt}]
         )
 
+        if not analysis_response.content:
+            logger.error("Empty content array from Claude API in generate_pdf_from_conversation")
+            return None
         proposal_md = analysis_response.content[0].text
 
         # Guardar Markdown
@@ -915,6 +921,9 @@ Crea un documento de propuesta profesional en Markdown incluyendo:
             messages=[{"role": "user", "content": analysis_prompt}]
         )
 
+        if not response.content:
+            logger.error("Empty content array from Claude API in /generate-proposal")
+            raise HTTPException(status_code=502, detail="Invalid response from Claude API")
         proposal_md = response.content[0].text
 
         with open(md_path, "w", encoding="utf-8") as f:
