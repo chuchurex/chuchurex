@@ -1,76 +1,154 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chuchurex</title>
-    <meta name="description" content="Desarrollo de proyectos web con IA">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.chuchurex.cl http://127.0.0.1:8002; img-src 'self' data:;">
-    <meta name="referrer" content="strict-origin-when-cross-origin">
-    <link rel="canonical" href="https://chuchurex.cl">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bombus Lab - Automatizacion con IA</title>
+  <meta name="description" content="Automatizacion inteligente para tu negocio. Resultados de equipo, velocidad de startup.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.bombuslab.com https://api.chuchurex.cl http://127.0.0.1:8002; img-src 'self' data:;">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="canonical" href="https://bombuslab.com">
 
-    <!-- Alternate language versions (sister sites) -->
-    <link rel="alternate" hreflang="es" href="https://chuchurex.cl" />
-    <link rel="alternate" hreflang="en" href="https://chuchurex.cl" />
-    <link rel="alternate" hreflang="pt" href="https://chuchurex.cl" />
-    <link rel="alternate" hreflang="x-default" href="https://chuchurex.cl" />
+  <link rel="alternate" hreflang="es" href="https://bombuslab.com">
+  <link rel="alternate" hreflang="en" href="https://bombuslab.com">
+  <link rel="alternate" hreflang="pt" href="https://bombuslab.com">
+  <link rel="alternate" hreflang="x-default" href="https://bombuslab.com">
 
-    <!-- Sister site relationship -->
-    <link rel="alternate" href="https://eluno.org" hreflang="es" title="El Uno" />
-    <link rel="alternate" href="https://eluno.org" hreflang="en" title="The One" />
-    <link rel="alternate" href="https://eluno.org" hreflang="pt" title="O Um" />
+  <meta property="og:title" content="Bombus Lab">
+  <meta property="og:description" content="Automatizacion inteligente para tu negocio">
+  <meta property="og:url" content="https://bombuslab.com">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://bombuslab.com/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:image" content="https://bombuslab.com/assets/og-image.png">
 
-    <!-- Open Graph -->
-    <meta property="og:title" content="Chuchurex">
-    <meta property="og:description" content="Desarrollo de proyectos web con IA">
-    <meta property="og:url" content="https://chuchurex.cl">
-    <meta property="og:type" content="website">
+  <!-- Favicons -->
+  <link rel="icon" href="assets/favicons/favicon.ico" sizes="32x32">
+  <link rel="icon" href="assets/favicons/icon-192.png" type="image/png" sizes="192x192">
+  <link rel="icon" href="assets/favicons/icon-512.png" type="image/png" sizes="512x512">
+  <link rel="apple-touch-icon" href="assets/favicons/apple-touch-icon.png">
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/main.css">
 </head>
-
 <body>
-    <header class="header">
-        <a href="/" class="logo">Chuchure<span>x</span></a>
-        <nav class="nav">
-            <a href="https://eluno.org" class="nav-link" target="_blank" rel="noopener noreferrer" data-i18n="navElUno">EL UNO</a>
-            <a href="https://mapanatal.org" class="nav-link" target="_blank" rel="noopener noreferrer">MAPA NATAL</a>
-        </nav>
-    </header>
 
-    <main class="main">
-        <div class="chat-container">
-            <div class="chat-messages" id="chatMessages"></div>
+  <!-- ================================================================
+       HEADER
+       ================================================================ -->
+  <header class="header" id="header">
+    <div class="container">
+      <a href="/" class="header-logo">
+        <img src="assets/isotipo.png" alt="" class="header-isotipo">
+        <span>Bombus Lab</span>
+      </a>
+      <nav class="header-nav">
+        <a href="#chat" data-i18n="navChat">Chat</a>
+        <a href="#contacto" data-i18n="navContacto">Contacto</a>
+        <a href="#chat" class="btn-cta" data-i18n="ctaConversemos">Conversemos</a>
+      </nav>
+    </div>
+  </header>
 
-            <div class="chat-prompt">
-                <h1 class="prompt-title" data-i18n="headerTitle">Desarrollo Web e Inteligencia Artificial</h1>
-            </div>
+  <main>
 
-            <form class="chat-form" id="chatForm">
-                <div class="input-wrapper">
-                    <textarea id="userInput" class="chat-input" data-i18n-placeholder="placeholder" placeholder="Describe tu proyecto y te ayudo a desarrollar tu idea..." rows="1" autofocus></textarea>
-                    <button type="submit" class="send-button" id="sendButton">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                        </svg>
-                    </button>
-                </div>
-            </form>
+    <!-- ================================================================
+         HERO
+         ================================================================ -->
+    <section class="hero" id="hero">
+      <div class="container">
+        <div class="hero-content">
+          <h1 class="headline-xl" data-i18n="heroHeadline">Automatiza tu negocio con inteligencia artificial.</h1>
+          <p data-i18n="heroSubtitle">Resultados de equipo. Velocidad de startup. Lo que tomaba meses, ahora toma dias.</p>
+          <div class="hero-actions">
+            <a href="#chat" class="btn-cta" data-i18n="heroCTAPrimary">Conversemos</a>
+            <a href="#chat" class="btn-outline" data-i18n="heroCTASecondary">Conversemos</a>
+          </div>
         </div>
-    </main>
+        <div class="hero-visual">
+          <div class="hero-bombus" id="heroBombus">
+            <!-- Wings injected by bombus.js -->
+            <picture>
+              <source srcset="assets/bombus/body.webp" type="image/webp">
+              <img class="bombus-body" src="assets/bombus/body.png" alt="" loading="eager">
+            </picture>
+            <div class="bombus-shadow" id="bombusShadow"></div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <footer class="footer">
-        <p>&copy; 2026 Chuchurex.cl · <a href="/about.html" data-i18n="footerAbout">Acerca</a> · <a href="/portafolio.html" data-i18n="footerPortfolio">Portafolio</a> · <a href="/privacidad.html" data-i18n="footerPrivacy">Privacidad</a></p>
-    </footer>
+    <!-- ================================================================
+         CHAT / CONVERSEMOS
+         ================================================================ -->
+    <section class="chat-section" id="chat">
+      <div class="container">
+        <div class="chat-section-header reveal">
+          <h2 class="headline-lg" data-i18n="chatTitle">Conversemos</h2>
+        </div>
+        <div class="chat-layout">
+        <div class="chat-wrapper">
+          <img class="chat-icon chat-icon--tl" src="assets/icons/cloud.svg" alt="" loading="lazy">
+          <img class="chat-icon chat-icon--tr" src="assets/icons/gear.svg" alt="" loading="lazy">
+          <img class="chat-icon chat-icon--ml" src="assets/icons/database.svg" alt="" loading="lazy">
+          <img class="chat-icon chat-icon--mr" src="assets/icons/tools.svg" alt="" loading="lazy">
+          <img class="chat-icon chat-icon--bl" src="assets/icons/wifi.svg" alt="" loading="lazy">
+          <img class="chat-icon chat-icon--br" src="assets/icons/upload.svg" alt="" loading="lazy">
 
-    <script src="js/i18n.js"></script>
-    <script src="js/app.js"></script>
+          <div class="chat-container reveal">
+            <div class="chat-messages" id="chatMessages">
+              <div class="chat-message chat-message--user">
+                <div class="chat-bubble" data-i18n="chatDemoUser">Como puedo automatizar mi negocio con IA?</div>
+              </div>
+              <div class="chat-message chat-message--assistant">
+                <div class="chat-bubble" data-i18n="chatDemoAssistant">Puedo ayudarte a identificar procesos que consumen tiempo y disenar soluciones con IA. Cuentame sobre tu operacion.</div>
+              </div>
+            </div>
+            <div class="chat-input-area">
+              <textarea class="chat-input" id="chatInput" rows="1" placeholder="Escribe tu mensaje..." data-i18n-placeholder="chatPlaceholder"></textarea>
+              <button class="chat-send" id="chatSend" aria-label="Enviar mensaje">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         CONTACTO / CTA FINAL
+         ================================================================ -->
+    <section class="contacto" id="contacto">
+      <div class="container">
+        <h2 class="headline-xl reveal" data-i18n="contactHeadline">HABLEMOS.</h2>
+        <p class="contacto-email reveal">
+          <a href="mailto:hola@bombuslab.com">hola@bombuslab.com</a>
+        </p>
+        <a href="#chat" class="btn-contacto reveal" data-i18n="contactCTA">INICIAR PROYECTO</a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================================================================
+       FOOTER
+       ================================================================ -->
+  <footer class="footer">
+    <div class="container">
+      <p>2026 Bombus Lab</p>
+    </div>
+  </footer>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/lines.js"></script>
+  <script src="js/bombus.js"></script>
+  <script src="js/app.js"></script>
 </body>
-
 </html>

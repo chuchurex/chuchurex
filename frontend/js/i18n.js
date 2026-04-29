@@ -1,258 +1,173 @@
-/**
- * CHUCHUREX - Internationalization (i18n)
- * Supports: Spanish (es), English (en), Portuguese (pt)
- */
+/* Bombus Lab - Internationalization (i18n)
+   Supports: Spanish (es), English (en), Portuguese (pt) */
 
-const translations = {
-    es: {
-        // Meta
-        pageTitle: "Chuchurex",
-        metaDescription: "Desarrollo de proyectos web con IA",
+var translations = {
+  es: {
+    // Meta
+    pageTitle: "Bombus Lab - Automatizacion con IA",
+    metaDescription: "Automatizacion inteligente para tu negocio",
 
-        // Header
-        headerTitle: "Desarrollo Web e Inteligencia Artificial",
-        navElUno: "EL UNO",
+    // Header
+    navChat: "Chat",
+    navContacto: "Contacto",
+    ctaConversemos: "Conversemos",
 
-        // Chat
-        placeholder: "Describe tu proyecto y te ayudo a desarrollar tu idea...",
+    // Hero
+    heroHeadline: "Automatiza tu negocio con inteligencia artificial.",
+    heroSubtitle: "Resultados de equipo. Velocidad de startup. Lo que tomaba meses, ahora toma dias.",
+    heroCTAPrimary: "Conversemos",
+    heroCTASecondary: "Conversemos",
 
-        // PDF
-        pdfLoading: "Generando tu propuesta...",
-        pdfReady: "Tu propuesta está lista",
-        pdfDownload: "Descargar Propuesta PDF",
+    // Chat
+    chatTitle: "Conversemos",
+    chatPlaceholder: "Escribe tu mensaje...",
+    chatDemoUser: "Como puedo automatizar mi negocio con IA?",
+    chatDemoAssistant: "Puedo ayudarte a identificar procesos que consumen tiempo y disenar soluciones con IA. Cuentame sobre tu operacion.",
 
-        // Errors
-        errorGeneric: "Ups, algo salió mal. ¿Puedes intentar de nuevo?",
-        errorUnavailable: "El chat no está disponible en este momento. Escríbeme directo a carlos@chuchurex.cl y te respondo a la brevedad.",
-        errorRateLimit: "Demasiadas solicitudes. Espera unos segundos e intenta de nuevo.",
+    // PDF
+    pdfLoading: "Generando tu propuesta...",
+    pdfReady: "Tu propuesta esta lista",
+    pdfDownload: "Descargar Propuesta PDF",
 
-        // Footer
-        footerAbout: "Acerca",
-        footerPortfolio: "Portafolio",
-        footerPrivacy: "Privacidad",
+    // Errors
+    errorGeneric: "Algo salio mal. Intenta de nuevo.",
+    errorUnavailable: "El chat no esta disponible. Escribe a hola@bombuslab.com.",
+    errorRateLimit: "Demasiadas solicitudes. Espera unos segundos.",
 
-        // Modal
-        modalTitle: "Sobre Chuchurex",
-        modalDescription1: "Soy Carlos, desarrollador web en Santiago de Chile. Trabajo con SASS + JavaScript vanilla y uso IA como multiplicador de productividad.",
-        modalDescription2: "Chuchurex te ayuda a desarrollar tu idea, estructurarla y cotizarla.",
-        modalContact: "Contacto:",
+    // Contacto
+    contactHeadline: "HABLEMOS.",
+    contactCTA: "INICIAR PROYECTO",
 
-        // Privacy page
-        privacyTitle: "Política de Privacidad - Chuchurex",
-        privacyHeader: "Política de Privacidad",
-        privacyBetaLabel: "Beta:",
-        privacyBetaText: "Este servicio se encuentra en fase de prueba. Durante este período, las conversaciones pueden ser almacenadas temporalmente para análisis y mejora del sistema.",
-        privacyResponsibleLabel: "Responsable:",
-        privacyDataLabel: "Datos recopilados:",
-        privacyDataText: "Durante la fase beta, las conversaciones del chat pueden ser almacenadas para mejorar el servicio. No se recopilan datos personales identificables.",
-        privacyCookiesLabel: "Cookies:",
-        privacyCookiesText: "No utilizamos cookies de seguimiento ni publicidad.",
-        privacyThirdPartyLabel: "Terceros:",
-        privacyThirdPartyText: "El chat utiliza la API de Anthropic para procesar mensajes. Consulta su",
-        privacyThirdPartyLink: "política de privacidad",
-        privacyRightsLabel: "Derechos:",
-        privacyRightsText: "Puedes contactarnos en carlos@chuchurex.cl para cualquier consulta.",
-        privacyBackHome: "Volver al inicio",
-    },
-    en: {
-        // Meta
-        pageTitle: "Chuchurex",
-        metaDescription: "Web development projects with AI",
+    // Footer
+    footerPrivacy: "Privacidad"
+  },
 
-        // Header
-        headerTitle: "Web Development and Artificial Intelligence",
-        navElUno: "THE ONE",
+  en: {
+    pageTitle: "Bombus Lab - AI Automation",
+    metaDescription: "Intelligent automation for your business",
 
-        // Chat
-        placeholder: "Describe your project and I'll help you develop your idea...",
+    navChat: "Chat",
+    navContacto: "Contact",
+    ctaConversemos: "Let's talk",
 
-        // PDF
-        pdfLoading: "Generating your proposal...",
-        pdfReady: "Your proposal is ready",
-        pdfDownload: "Download Proposal PDF",
+    heroHeadline: "Automate your business with artificial intelligence.",
+    heroSubtitle: "Team results. Startup speed. What took months now takes days.",
+    heroCTAPrimary: "Let's talk",
+    heroCTASecondary: "Let's talk",
 
-        // Errors
-        errorGeneric: "Oops, something went wrong. Can you try again?",
-        errorUnavailable: "The chat is temporarily unavailable. Contact me directly at carlos@chuchurex.cl and I'll get back to you shortly.",
-        errorRateLimit: "Too many requests. Wait a few seconds and try again.",
+    chatTitle: "Let's talk",
+    chatPlaceholder: "Type your message...",
+    chatDemoUser: "How can I automate my business with AI?",
+    chatDemoAssistant: "I can help you identify time-consuming processes and design AI solutions. Tell me about your operation.",
 
-        // Footer
-        footerAbout: "About",
-        footerPortfolio: "Portfolio",
-        footerPrivacy: "Privacy",
+    pdfLoading: "Generating your proposal...",
+    pdfReady: "Your proposal is ready",
+    pdfDownload: "Download Proposal PDF",
 
-        // Modal
-        modalTitle: "About Chuchurex",
-        modalDescription1: "I'm Carlos, a web developer in Santiago, Chile. I work with SASS + vanilla JavaScript and use AI as a productivity multiplier.",
-        modalDescription2: "Chuchurex helps you develop your idea, structure it, and get a quote.",
-        modalContact: "Contact:",
+    errorGeneric: "Something went wrong. Try again.",
+    errorUnavailable: "Chat is unavailable. Email us at hola@bombuslab.com.",
+    errorRateLimit: "Too many requests. Wait a few seconds.",
 
-        // Privacy page
-        privacyTitle: "Privacy Policy - Chuchurex",
-        privacyHeader: "Privacy Policy",
-        privacyBetaLabel: "Beta:",
-        privacyBetaText: "This service is in beta testing phase. During this period, conversations may be temporarily stored for analysis and system improvement.",
-        privacyResponsibleLabel: "Responsible:",
-        privacyDataLabel: "Data collected:",
-        privacyDataText: "During the beta phase, chat conversations may be stored to improve the service. No personally identifiable data is collected.",
-        privacyCookiesLabel: "Cookies:",
-        privacyCookiesText: "We do not use tracking or advertising cookies.",
-        privacyThirdPartyLabel: "Third parties:",
-        privacyThirdPartyText: "The chat uses the Anthropic API to process messages. Check their",
-        privacyThirdPartyLink: "privacy policy",
-        privacyRightsLabel: "Rights:",
-        privacyRightsText: "You can contact us at carlos@chuchurex.cl for any inquiries.",
-        privacyBackHome: "Back to home",
-    },
-    pt: {
-        // Meta
-        pageTitle: "Chuchurex",
-        metaDescription: "Desenvolvimento de projetos web com IA",
+    contactHeadline: "LET'S TALK.",
+    contactCTA: "START PROJECT",
 
-        // Header
-        headerTitle: "Desenvolvimento Web e Inteligência Artificial",
-        navElUno: "O UM",
+    footerPrivacy: "Privacy"
+  },
 
-        // Chat
-        placeholder: "Descreva seu projeto e eu ajudo a desenvolver sua ideia...",
+  pt: {
+    pageTitle: "Bombus Lab - Automacao com IA",
+    metaDescription: "Automacao inteligente para seu negocio",
 
-        // PDF
-        pdfLoading: "Gerando sua proposta...",
-        pdfReady: "Sua proposta está pronta",
-        pdfDownload: "Baixar Proposta PDF",
+    navChat: "Chat",
+    navContacto: "Contato",
+    ctaConversemos: "Vamos conversar",
 
-        // Errors
-        errorGeneric: "Ops, algo deu errado. Pode tentar de novo?",
-        errorUnavailable: "O chat não está disponível no momento. Me escreva diretamente em carlos@chuchurex.cl e respondo em breve.",
-        errorRateLimit: "Muitas solicitações. Espere alguns segundos e tente novamente.",
+    heroHeadline: "Automatize seu negocio com inteligencia artificial.",
+    heroSubtitle: "Resultados de equipe. Velocidade de startup. O que levava meses, agora leva dias.",
+    heroCTAPrimary: "Vamos conversar",
+    heroCTASecondary: "Vamos conversar",
 
-        // Footer
-        footerAbout: "Sobre",
-        footerPortfolio: "Portfólio",
-        footerPrivacy: "Privacidade",
+    chatTitle: "Vamos conversar",
+    chatPlaceholder: "Digite sua mensagem...",
+    chatDemoUser: "Como posso automatizar meu negocio com IA?",
+    chatDemoAssistant: "Posso ajudar a identificar processos que consomem tempo e desenhar solucoes com IA. Me conte sobre sua operacao.",
 
-        // Modal
-        modalTitle: "Sobre Chuchurex",
-        modalDescription1: "Sou Carlos, desenvolvedor web em Santiago do Chile. Trabalho com SASS + JavaScript vanilla e uso IA como multiplicador de produtividade.",
-        modalDescription2: "Chuchurex ajuda você a desenvolver sua ideia, estruturá-la e orçá-la.",
-        modalContact: "Contato:",
+    pdfLoading: "Gerando sua proposta...",
+    pdfReady: "Sua proposta esta pronta",
+    pdfDownload: "Baixar Proposta PDF",
 
-        // Privacy page
-        privacyTitle: "Política de Privacidade - Chuchurex",
-        privacyHeader: "Política de Privacidade",
-        privacyBetaLabel: "Beta:",
-        privacyBetaText: "Este serviço está em fase de testes. Durante este período, as conversas podem ser armazenadas temporariamente para análise e melhoria do sistema.",
-        privacyResponsibleLabel: "Responsável:",
-        privacyDataLabel: "Dados coletados:",
-        privacyDataText: "Durante a fase beta, as conversas do chat podem ser armazenadas para melhorar o serviço. Não são coletados dados pessoais identificáveis.",
-        privacyCookiesLabel: "Cookies:",
-        privacyCookiesText: "Não utilizamos cookies de rastreamento nem publicidade.",
-        privacyThirdPartyLabel: "Terceiros:",
-        privacyThirdPartyText: "O chat utiliza a API da Anthropic para processar mensagens. Consulte a",
-        privacyThirdPartyLink: "política de privacidade",
-        privacyRightsLabel: "Direitos:",
-        privacyRightsText: "Você pode nos contatar em carlos@chuchurex.cl para qualquer dúvida.",
-        privacyBackHome: "Voltar ao início",
-    }
+    errorGeneric: "Algo deu errado. Tente novamente.",
+    errorUnavailable: "Chat indisponivel. Escreva para hola@bombuslab.com.",
+    errorRateLimit: "Muitas solicitacoes. Espere alguns segundos.",
+
+    contactHeadline: "VAMOS CONVERSAR.",
+    contactCTA: "INICIAR PROJETO",
+
+    footerPrivacy: "Privacidade"
+  }
 };
 
-/**
- * Detect browser language and return supported language code
- */
 function detectLanguage() {
-    const browserLang = navigator.language || navigator.userLanguage;
-    const langCode = browserLang.split('-')[0].toLowerCase();
-
-    // Return supported language or default to Spanish
-    if (translations[langCode]) {
-        return langCode;
-    }
-    return 'es';
+  var browserLang = navigator.language || navigator.userLanguage;
+  var langCode = browserLang.split('-')[0].toLowerCase();
+  return translations[langCode] ? langCode : 'es';
 }
 
-/**
- * Get current language (from localStorage or detect)
- */
 function getCurrentLanguage() {
-    const stored = localStorage.getItem('chuchurex_lang');
-    if (stored && translations[stored]) {
-        return stored;
-    }
-    return detectLanguage();
+  var stored = localStorage.getItem('bombuslab_lang');
+  if (stored && translations[stored]) return stored;
+  return detectLanguage();
 }
 
-/**
- * Set language and save to localStorage
- */
 function setLanguage(lang) {
-    if (translations[lang]) {
-        localStorage.setItem('chuchurex_lang', lang);
-        applyTranslations(lang);
-        return true;
-    }
-    return false;
+  if (translations[lang]) {
+    localStorage.setItem('bombuslab_lang', lang);
+    applyTranslations(lang);
+    return true;
+  }
+  return false;
 }
 
-/**
- * Get translation for a key
- */
 function t(key) {
-    const lang = getCurrentLanguage();
-    return translations[lang][key] || translations['es'][key] || key;
+  var lang = getCurrentLanguage();
+  return (translations[lang] && translations[lang][key]) || (translations.es && translations.es[key]) || key;
 }
 
-/**
- * Apply translations to the page
- */
 function applyTranslations(lang) {
-    if (!lang) lang = getCurrentLanguage();
-    const trans = translations[lang];
+  if (!lang) lang = getCurrentLanguage();
+  var trans = translations[lang];
+  if (!trans) return;
 
-    // Update HTML lang attribute
-    document.documentElement.lang = lang;
+  document.documentElement.lang = lang;
+  document.title = trans.pageTitle || 'Bombus Lab';
 
-    // Update page title
-    document.title = trans.pageTitle;
+  var metaDesc = document.querySelector('meta[name="description"]');
+  if (metaDesc) metaDesc.setAttribute('content', trans.metaDescription || '');
 
-    // Update meta description
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', trans.metaDescription);
+  var ogDesc = document.querySelector('meta[property="og:description"]');
+  if (ogDesc) ogDesc.setAttribute('content', trans.metaDescription || '');
 
-    // Update OG description
-    const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.setAttribute('content', trans.metaDescription);
+  document.querySelectorAll('[data-i18n]').forEach(function (el) {
+    var key = el.getAttribute('data-i18n');
+    if (trans[key]) el.textContent = trans[key];
+  });
 
-    // Update elements with data-i18n attribute
-    document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        if (trans[key]) {
-            el.textContent = trans[key];
-        }
-    });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+    var key = el.getAttribute('data-i18n-placeholder');
+    if (trans[key]) el.placeholder = trans[key];
+  });
 
-    // Update placeholders
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-        const key = el.getAttribute('data-i18n-placeholder');
-        if (trans[key]) {
-            el.placeholder = trans[key];
-        }
-    });
-
-    // Update elements with data-i18n-title (e.g. <title>)
-    document.querySelectorAll('[data-i18n-title]').forEach(el => {
-        const key = el.getAttribute('data-i18n-title');
-        if (trans[key]) {
-            el.textContent = trans[key];
-        }
-    });
+  document.querySelectorAll('[data-i18n-alt]').forEach(function (el) {
+    var key = el.getAttribute('data-i18n-alt');
+    if (trans[key]) el.alt = trans[key];
+  });
 }
 
-// Export for use in app.js
 window.i18n = {
-    translations,
-    detectLanguage,
-    getCurrentLanguage,
-    setLanguage,
-    t,
-    applyTranslations
+  translations: translations,
+  detectLanguage: detectLanguage,
+  getCurrentLanguage: getCurrentLanguage,
+  setLanguage: setLanguage,
+  t: t,
+  applyTranslations: applyTranslations
 };

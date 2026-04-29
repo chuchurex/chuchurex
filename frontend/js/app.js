@@ -1,317 +1,230 @@
-/**
- * CHUCHUREX - Chat Application
- * Frontend JavaScript
- */
+/* Bombus Lab - Main Application */
 
-const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://127.0.0.1:8002'
-    : 'https://api.chuchurex.cl';
+var API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://127.0.0.1:8002'
+  : 'https://api.bombuslab.com';
 
-// DOM Elements
-const chatForm = document.getElementById('chatForm');
-const userInput = document.getElementById('userInput');
-const sendButton = document.getElementById('sendButton');
-const chatMessages = document.getElementById('chatMessages');
+/* =============================================================================
+   HEADER SCROLL
+   ============================================================================= */
 
-// Conversation history for context
-let conversationHistory = [];
+(function () {
+  var header = document.getElementById('header');
+  if (!header) return;
 
-// Current language
-let currentLang = 'es';
-
-// =============================================================================
-// CHAT FUNCTIONS
-// =============================================================================
-
-/**
- * Send message to backend and get response
- */
-async function sendMessage(message) {
-    // Add user message to history
-    conversationHistory.push({
-        role: 'user',
-        content: message
-    });
-
-    // Display user message
-    displayMessage(message, 'user');
-
-    // Show typing indicator
-    const typingIndicator = showTypingIndicator();
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-        const response = await fetch(`${API_URL}/chat`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                message: message,
-                history: conversationHistory.slice(-10), // Last 10 messages for context
-                lang: currentLang
-            }),
-            signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Remove typing indicator
-        typingIndicator.remove();
-
-        // Add assistant message to history
-        conversationHistory.push({
-            role: 'assistant',
-            content: data.response
-        });
-
-        // Display assistant message
-        displayMessage(data.response, 'assistant');
-
-        // Limit history to last 20 messages to prevent memory growth
-        if (conversationHistory.length > 20) {
-            conversationHistory = conversationHistory.slice(-20);
-        }
-
-        // Si se debe generar PDF, mostrar indicador de carga
-        if (data.generate_pdf && data.pdf_url) {
-            const loadingIndicator = displayPDFLoadingIndicator();
-
-            // Esperar mientras se genera el PDF
-            setTimeout(() => {
-                loadingIndicator.remove();
-                displayPDFDownloadLink(data.pdf_url);
-            }, 3000); // 3 segundos para dar tiempo a la generación
-        }
-
-    } catch (error) {
-        console.error('Error:', error);
-        typingIndicator.remove();
-
-        // Remove the failed user message from history so they can retry
-        conversationHistory.pop();
-
-        let errorKey = 'errorGeneric';
-        if (error.message && error.message.includes('503')) {
-            errorKey = 'errorUnavailable';
-        } else if (error.message && error.message.includes('429')) {
-            errorKey = 'errorRateLimit';
-        } else if (error.message && error.message.includes('Failed to fetch')) {
-            errorKey = 'errorUnavailable';
-        }
-
-        displayMessage(window.i18n.t(errorKey), 'assistant');
-    }
-}
-
-/**
- * Display a message in the chat
- */
-function displayMessage(content, role) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message message-${role}`;
-
-    // Parse markdown-like formatting for assistant messages
-    if (role === 'assistant') {
-        messageDiv.innerHTML = formatMessage(content);
+  var lastScroll = 0;
+  window.addEventListener('scroll', function () {
+    var y = window.scrollY || window.pageYOffset;
+    if (y > 40) {
+      header.classList.add('scrolled');
     } else {
-        messageDiv.textContent = content;
+      header.classList.remove('scrolled');
     }
+    lastScroll = y;
+  }, { passive: true });
+})();
 
-    chatMessages.appendChild(messageDiv);
-    scrollToBottom();
-}
+/* =============================================================================
+   SMOOTH SCROLL NAVIGATION
+   ============================================================================= */
 
-/**
- * Escape HTML to prevent XSS
- */
-function escapeHtml(text) {
-    const div = document.createElement('div');
+(function () {
+  var links = document.querySelectorAll('a[href^="#"]');
+  links.forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      var targetId = this.getAttribute('href');
+      if (targetId === '#') return;
+      var target = document.querySelector(targetId);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+})();
+
+/* =============================================================================
+   SCROLL REVEAL (IntersectionObserver)
+   ============================================================================= */
+
+(function () {
+  var reveals = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+  if (!reveals.length) return;
+
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, {
+    threshold: 0.1,
+    rootMargin: '0px 0px -40px 0px'
+  });
+
+  reveals.forEach(function (el) {
+    observer.observe(el);
+  });
+})();
+
+/* =============================================================================
+   CHAT FUNCTIONALITY
+   ============================================================================= */
+
+(function () {
+  var chatInput = document.getElementById('chatInput');
+  var chatSend = document.getElementById('chatSend');
+  var chatMessages = document.getElementById('chatMessages');
+  if (!chatInput || !chatSend || !chatMessages) return;
+
+  var conversationHistory = [];
+  var currentLang = (window.i18n && window.i18n.getCurrentLanguage) ? window.i18n.getCurrentLanguage() : 'es';
+
+  function escapeHtml(text) {
+    var div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
-}
+  }
 
-/**
- * Format message with basic markdown support
- */
-function formatMessage(text) {
-    // Escape HTML first to prevent XSS
+  function formatMessage(text) {
     text = escapeHtml(text);
-
-    // Split into paragraphs
-    const paragraphs = text.split('\n\n');
-
-    return paragraphs.map(p => {
-        // Bold
-        p = p.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Italic
-        p = p.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        // Line breaks within paragraph
-        p = p.replace(/\n/g, '<br>');
-        return `<p>${p}</p>`;
+    var paragraphs = text.split('\n\n');
+    return paragraphs.map(function (p) {
+      p = p.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      p = p.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      p = p.replace(/\n/g, '<br>');
+      return '<p>' + p + '</p>';
     }).join('');
-}
+  }
 
-/**
- * Show typing indicator
- */
-function showTypingIndicator() {
-    const indicator = document.createElement('div');
-    indicator.className = 'typing-indicator';
-    indicator.innerHTML = '<span></span><span></span><span></span>';
-    chatMessages.appendChild(indicator);
-    scrollToBottom();
-    return indicator;
-}
+  function displayMessage(content, role) {
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'chat-message chat-message--' + role;
 
-/**
- * Scroll chat to bottom
- */
-function scrollToBottom() {
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
 
-/**
- * Display PDF loading indicator
- */
-function displayPDFLoadingIndicator() {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message message-assistant message-pdf-loading';
-
-    messageDiv.innerHTML = `
-        <div class="pdf-loading-content">
-            <div class="pdf-spinner"></div>
-            <p>${window.i18n.t('pdfLoading')}</p>
-        </div>
-    `;
-
-    chatMessages.appendChild(messageDiv);
-    scrollToBottom();
-    return messageDiv;
-}
-
-/**
- * Display PDF download link
- */
-function displayPDFDownloadLink(pdfUrl) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = 'message message-assistant message-pdf';
-
-    // Validate pdfUrl starts with expected path
-    if (!pdfUrl.startsWith('/download-proposal/')) {
-        console.error('Invalid PDF URL received');
-        return;
+    if (role === 'assistant') {
+      bubble.innerHTML = formatMessage(content);
+    } else {
+      bubble.textContent = content;
     }
 
-    const downloadLink = `${API_URL}${pdfUrl}`;
+    msgDiv.appendChild(bubble);
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 
-    // Build DOM elements instead of innerHTML to prevent XSS
-    const p = document.createElement('p');
-    const strong = document.createElement('strong');
-    strong.textContent = window.i18n.t('pdfReady');
-    p.textContent = '\u2705 ';
-    p.appendChild(strong);
+  function showTypingIndicator() {
+    var indicator = document.createElement('div');
+    indicator.className = 'chat-message chat-message--assistant';
+    indicator.innerHTML = '<div class="typing-indicator"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+    chatMessages.appendChild(indicator);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return indicator;
+  }
 
-    const a = document.createElement('a');
-    a.href = downloadLink;
-    a.className = 'pdf-download-button';
+  function sendMessage(message) {
+    conversationHistory.push({ role: 'user', content: message });
+    displayMessage(message, 'user');
+
+    var typing = showTypingIndicator();
+
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function () { controller.abort(); }, 30000);
+
+    fetch(API_URL + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: message,
+        history: conversationHistory.slice(-10),
+        lang: currentLang
+      }),
+      signal: controller.signal
+    })
+    .then(function (response) {
+      clearTimeout(timeoutId);
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    })
+    .then(function (data) {
+      typing.remove();
+      conversationHistory.push({ role: 'assistant', content: data.response });
+      displayMessage(data.response, 'assistant');
+      if (conversationHistory.length > 20) {
+        conversationHistory = conversationHistory.slice(-20);
+      }
+      if (data.generate_pdf && data.pdf_url && data.pdf_url.indexOf('/download-proposal/') === 0) {
+        displayPDFLink(data.pdf_url);
+      }
+    })
+    .catch(function (error) {
+      typing.remove();
+      conversationHistory.pop();
+      var errMsg = 'Ha ocurrido un error. Intenta nuevamente.';
+      if (window.i18n && window.i18n.t) {
+        errMsg = window.i18n.t('errorGeneric');
+      }
+      displayMessage(errMsg, 'assistant');
+    });
+  }
+
+  function displayPDFLink(pdfUrl) {
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'chat-message chat-message--assistant';
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    var a = document.createElement('a');
+    a.href = API_URL + pdfUrl;
     a.target = '_blank';
     a.download = '';
-    a.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>`;
-    a.appendChild(document.createTextNode(' ' + window.i18n.t('pdfDownload')));
+    a.textContent = (window.i18n && window.i18n.t) ? window.i18n.t('pdfDownload') : 'Descargar propuesta PDF';
+    a.style.fontWeight = '600';
+    bubble.appendChild(a);
+    msgDiv.appendChild(bubble);
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
 
-    messageDiv.appendChild(p);
-    messageDiv.appendChild(a);
+  // Auto-resize textarea
+  chatInput.addEventListener('input', function () {
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+  });
 
-    chatMessages.appendChild(messageDiv);
-    scrollToBottom();
-}
+  // Send on click
+  chatSend.addEventListener('click', function () {
+    var msg = chatInput.value.trim();
+    if (!msg) return;
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+    chatInput.disabled = true;
+    chatSend.disabled = true;
+    sendMessage(msg);
+    setTimeout(function () {
+      chatInput.disabled = false;
+      chatSend.disabled = false;
+      chatInput.focus();
+    }, 500);
+  });
 
-// =============================================================================
-// TEXTAREA AUTO-RESIZE
-// =============================================================================
-
-function autoResize() {
-    userInput.style.height = 'auto';
-    userInput.style.height = Math.min(userInput.scrollHeight, 150) + 'px';
-}
-
-// =============================================================================
-// EVENT LISTENERS
-// =============================================================================
-
-// Form submit
-chatForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const message = userInput.value.trim();
-    if (!message) return;
-
-    // Disable input while sending
-    userInput.disabled = true;
-    sendButton.disabled = true;
-
-    // Clear input
-    userInput.value = '';
-    autoResize();
-
-    // Send message
-    await sendMessage(message);
-
-    // Re-enable input
-    userInput.disabled = false;
-    sendButton.disabled = false;
-    userInput.focus();
-});
-
-// Textarea auto-resize
-userInput.addEventListener('input', autoResize);
-
-// Submit on Enter (but Shift+Enter for new line)
-userInput.addEventListener('keydown', (e) => {
+  // Send on Enter
+  chatInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        chatForm.dispatchEvent(new Event('submit'));
+      e.preventDefault();
+      chatSend.click();
     }
-});
+  });
+})();
 
-// =============================================================================
-// INITIALIZATION
-// =============================================================================
+/* =============================================================================
+   INITIALIZATION
+   ============================================================================= */
 
-// Header scroll effect
-const header = document.querySelector('.header');
-const scrollContainer = document.querySelector('.chat-messages');
-
-if (scrollContainer) {
-    scrollContainer.addEventListener('scroll', () => {
-        if (scrollContainer.scrollTop > 20) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
-    });
-}
-
-// Initialize i18n and apply translations
-window.addEventListener('DOMContentLoaded', () => {
-    currentLang = window.i18n.getCurrentLanguage();
-    window.i18n.applyTranslations(currentLang);
-});
-
-// Focus input on load
-window.addEventListener('load', () => {
-    userInput.focus();
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.i18n && window.i18n.applyTranslations) {
+    var lang = window.i18n.getCurrentLanguage();
+    window.i18n.applyTranslations(lang);
+  }
 });
