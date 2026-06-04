@@ -19,6 +19,8 @@ from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel, field_validator
 from typing import List, Literal, Optional
 import html
+import re
+import httpx
 import anthropic
 from dotenv import load_dotenv
 
@@ -79,6 +81,10 @@ if not ANTHROPIC_API_KEY:
     raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
 
 client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+
+# Notificaciones de leads via Telegram (opcional: si no estan los secrets, se omite)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # Detectar entorno
 IS_PRODUCTION = os.getenv("ENVIRONMENT", "development") == "production"
@@ -158,6 +164,52 @@ def save_chat(messages: list, response: str):
     except Exception as e:
         logger.warning(f"Error guardando chat: {e}")
 
+
+# =============================================================================
+# NOTIFICACION DE LEADS (Telegram)
+# =============================================================================
+
+EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+# Telefono: 7+ digitos, admite +, espacios, guiones y parentesis
+PHONE_RE = re.compile(r"\+?\d[\d\s().\-]{6,}\d")
+
+
+def extract_contact(text: str):
+    """Devuelve (email, telefono) detectados en el texto, o None."""
+    email = EMAIL_RE.search(text or "")
+    phone = PHONE_RE.search(text or "")
+    return (email.group(0) if email else None,
+            phone.group(0) if phone else None)
+
+
+async def notify_lead(messages: list, contact_email: str = None, contact_phone: str = None):
+    """Avisa por Telegram cuando entra un lead. No rompe el chat si falla."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        logger.warning("Telegram no configurado; lead no notificado")
+        return False
+    contacto = ""
+    if contact_email:
+        contacto += f"\nEmail: {contact_email}"
+    if contact_phone:
+        contacto += f"\nTel: {contact_phone}"
+    transcripcion = "\n".join(
+        f"{'Cliente' if m['role'] == 'user' else 'Bot'}: {m['content']}"
+        for m in messages[-12:]
+    )
+    texto = f"Nuevo lead en chuchurex.cl{contacto}\n\nConversacion:\n{transcripcion}"
+    try:
+        async with httpx.AsyncClient(timeout=10) as hc:
+            resp = await hc.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                json={"chat_id": TELEGRAM_CHAT_ID, "text": texto[:4000]},
+            )
+            resp.raise_for_status()
+        logger.info("Lead notificado por Telegram")
+        return True
+    except Exception as e:
+        logger.error(f"Error notificando lead por Telegram: {e}")
+        return False
+
 # =============================================================================
 # SYSTEM PROMPTS (MULTILINGÜE)
 # =============================================================================
@@ -232,6 +284,11 @@ PROHIBICIONES ABSOLUTAS:
 TARIFAS (solo si preguntan):
 Landing page: $200-300 USD | Sitio completo: $500-800 USD | App web: $800-3000 USD
 
+CAPTURA DE LEAD (contacto):
+- Si el cliente deja un email o un teléfono, o pide explícitamente que lo contacten, responde SOLO algo breve como: "Listo, Chuchurex ya fue notificado y te contactará pronto." e incluye [LEAD] al final.
+- NUNCA digas que Chuchurex fue notificado sin incluir [LEAD]. Eso genera una promesa vacía.
+- [LEAD] es invisible para el cliente; no lo menciones ni lo expliques.
+
 IMPORTANTE: Responde SIEMPRE en el idioma en que te escriben.""",
 
     "en": """You work at Chuchurex, a freelance web developer based in Santiago, Chile.
@@ -301,6 +358,11 @@ ABSOLUTE PROHIBITIONS:
 RATES (only if asked):
 Landing page: $200-300 USD | Full website: $500-800 USD | Web app: $800-3000 USD
 
+LEAD CAPTURE (contact):
+- If the client leaves an email or phone number, or explicitly asks to be contacted, respond ONLY with something short like: "Done, Chuchurex has been notified and will contact you soon." and include [LEAD] at the end.
+- NEVER say Chuchurex was notified without including [LEAD]. That creates an empty promise.
+- [LEAD] is invisible to the client; don't mention or explain it.
+
 IMPORTANT: ALWAYS respond in the language they write to you.""",
 
     "pt": """Você trabalha na Chuchurex, desenvolvedor web freelancer em Santiago do Chile.
@@ -369,6 +431,11 @@ PROIBIÇÕES ABSOLUTAS:
 
 PREÇOS (só se perguntarem):
 Landing page: $200-300 USD | Site completo: $500-800 USD | App web: $800-3000 USD
+
+CAPTURA DE LEAD (contato):
+- Se o cliente deixar um email ou telefone, ou pedir explicitamente para ser contatado, responda APENAS algo curto como: "Pronto, Chuchurex já foi notificado e entrará em contato em breve." e inclua [LEAD] no final.
+- NUNCA diga que Chuchurex foi notificado sem incluir [LEAD]. Isso gera promessa vazia.
+- [LEAD] é invisível para o cliente; não o mencione nem explique.
 
 IMPORTANTE: Responda SEMPRE no idioma em que te escrevem."""
 }
@@ -673,6 +740,19 @@ async def chat(request: ChatRequest, req: Request):
         response_text = response.content[0].text
 
         save_chat(messages, response_text)
+
+        # Deteccion de lead: el usuario dejo contacto (email/tel) o el modelo marco [LEAD]
+        contact_email, contact_phone = extract_contact(request.message)
+        if contact_email or contact_phone or "[LEAD]" in response_text:
+            await notify_lead(messages, contact_email, contact_phone)
+            response_text = response_text.replace("[LEAD]", "").strip()
+            if len(response_text) < 3:
+                lead_defaults = {
+                    "es": "Listo, Chuchurex ya fue notificado y te contactara pronto.",
+                    "en": "Done, Chuchurex has been notified and will contact you soon.",
+                    "pt": "Pronto, Chuchurex ja foi notificado e entrara em contato em breve.",
+                }
+                response_text = lead_defaults.get(lang, lead_defaults["es"])
 
         # Generar PDF si se detectó aceptación O si el modelo incluyó el trigger
         if should_generate_pdf or "[PDF_TRIGGER]" in response_text:
