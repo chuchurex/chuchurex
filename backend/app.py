@@ -35,6 +35,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("chuchurex")
 
+# Evitar que httpx loguee las URLs de cada request (la de Telegram lleva el token en la ruta)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 # =============================================================================
 # RATE LIMITER (in-memory, per IP)
 # =============================================================================
@@ -207,7 +211,11 @@ async def notify_lead(messages: list, contact_email: str = None, contact_phone: 
         logger.info("Lead notificado por Telegram")
         return True
     except Exception as e:
-        logger.error(f"Error notificando lead por Telegram: {e}")
+        # Scrub del token por si la excepcion incluye la URL completa
+        msg = str(e)
+        if TELEGRAM_BOT_TOKEN:
+            msg = msg.replace(TELEGRAM_BOT_TOKEN, "***")
+        logger.error(f"Error notificando lead por Telegram: {msg}")
         return False
 
 # =============================================================================
