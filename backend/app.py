@@ -654,19 +654,28 @@ async def chat(request: ChatRequest, req: Request):
         
         # Detectar idioma del MENSAJE del usuario (no del navegador)
         def detect_message_language(text):
-            text_lower = text.lower()
-            # Palabras comunes en cada idioma
-            en_words = ["hello", "hi", "hey", "need", "want", "would", "like", "please", "website", "help", "looking", "for", "the", "and", "with", "can", "you"]
-            pt_words = ["olá", "oi", "preciso", "quero", "gostaria", "por favor", "site", "ajuda", "procuro", "para", "com", "você", "pode"]
-
-            en_count = sum(1 for word in en_words if word in text_lower)
-            pt_count = sum(1 for word in pt_words if word in text_lower)
-
-            if en_count > pt_count and en_count > 0:
-                return "en"
-            elif pt_count > en_count and pt_count > 0:
+            if not text:
+                return "es"
+            t = text.lower()
+            # Caracteres exclusivos del portugués (no existen en español)
+            if any(c in t for c in ("ã", "õ", "ç")):
                 return "pt"
-            return "es"
+            # Tokens completos: evita el bug de substring ("para" dentro de "comparar", etc.)
+            tokens = set(re.findall(r"[a-záéíóúüñ]+", t))
+            en_markers = {"hello", "hi", "hey", "the", "need", "want", "would", "please",
+                          "website", "help", "looking", "your", "thanks", "thank", "im"}
+            pt_markers = {"olá", "oi", "você", "vocês", "obrigado", "obrigada", "não",
+                          "também", "gostaria", "orçamento", "sou", "tenho", "minha"}
+            es_markers = {"hola", "quiero", "necesito", "gracias", "sitio", "página",
+                          "para", "con", "una", "quisiera", "ayuda", "buenas", "cómo", "mi", "tu"}
+            en = len(tokens & en_markers)
+            pt = len(tokens & pt_markers)
+            es = len(tokens & es_markers)
+            if max(en, pt, es) == 0:
+                return "es"
+            if es >= en and es >= pt:   # ante empate, gana español (público es chileno)
+                return "es"
+            return "en" if en >= pt else "pt"
 
         # Usar idioma del mensaje, no del navegador
         lang = detect_message_language(request.message)
