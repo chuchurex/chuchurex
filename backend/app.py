@@ -63,14 +63,15 @@ load_dotenv()
 # Detectar directorio base (donde está este archivo)
 BASE_DIR = Path(__file__).resolve().parent
 
-# Directorios relativos al proyecto
-CHATS_DIR = BASE_DIR / "chats"
+# Directorio de datos persistentes (volumen en prod via DATA_DIR; local cae a BASE_DIR)
+DATA_DIR = Path(os.getenv("DATA_DIR", str(BASE_DIR)))
+CHATS_DIR = DATA_DIR / "chats"
 PDF_GENERATOR_DIR = BASE_DIR / "pdf-generator"
-PROPOSALS_DIR = BASE_DIR / "proposals"
+PROPOSALS_DIR = DATA_DIR / "proposals"
 
 # Crear directorios si no existen
-CHATS_DIR.mkdir(exist_ok=True)
-PROPOSALS_DIR.mkdir(exist_ok=True)
+CHATS_DIR.mkdir(parents=True, exist_ok=True)
+PROPOSALS_DIR.mkdir(parents=True, exist_ok=True)
 
 # API Key
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
