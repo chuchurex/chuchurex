@@ -196,7 +196,7 @@ async def notify_lead(messages: list, contact_email: str = None, contact_phone: 
         f"{'Cliente' if m['role'] == 'user' else 'Bot'}: {m['content']}"
         for m in messages[-12:]
     )
-    texto = f"Nuevo lead en chuchurex.cl{contacto}\n\nConversacion:\n{transcripcion}"
+    texto = f"Nuevo lead/mensaje en chuchurex.cl{contacto}\n\nConversacion:\n{transcripcion}"
     try:
         async with httpx.AsyncClient(timeout=10) as hc:
             resp = await hc.post(
@@ -284,9 +284,9 @@ PROHIBICIONES ABSOLUTAS:
 TARIFAS (solo si preguntan):
 Landing page: $200-300 USD | Sitio completo: $500-800 USD | App web: $800-3000 USD
 
-CAPTURA DE LEAD (contacto):
-- Si el cliente deja un email o un teléfono, o pide explícitamente que lo contacten, responde SOLO algo breve como: "Listo, Chuchurex ya fue notificado y te contactará pronto." e incluye [LEAD] al final.
-- NUNCA digas que Chuchurex fue notificado sin incluir [LEAD]. Eso genera una promesa vacía.
+CONTACTO Y MENSAJES PARA CHUCHUREX:
+- Si el cliente deja un email o teléfono, pide que lo contacten, O quiere dejarle un mensaje/recado a Chuchurex, responde SOLO algo breve confirmando que se lo harás llegar (ej. "Listo, Chuchurex ya fue notificado y te contactará pronto." o "Listo, se lo hago llegar a Chuchurex.") e incluye [LEAD] al final.
+- NUNCA digas que se lo harás llegar o que Chuchurex fue notificado sin incluir [LEAD]. Eso genera una promesa vacía.
 - [LEAD] es invisible para el cliente; no lo menciones ni lo expliques.
 
 IMPORTANTE: Responde SIEMPRE en el idioma en que te escriben.""",
@@ -358,9 +358,9 @@ ABSOLUTE PROHIBITIONS:
 RATES (only if asked):
 Landing page: $200-300 USD | Full website: $500-800 USD | Web app: $800-3000 USD
 
-LEAD CAPTURE (contact):
-- If the client leaves an email or phone number, or explicitly asks to be contacted, respond ONLY with something short like: "Done, Chuchurex has been notified and will contact you soon." and include [LEAD] at the end.
-- NEVER say Chuchurex was notified without including [LEAD]. That creates an empty promise.
+CONTACT & MESSAGES FOR CHUCHUREX:
+- If the client leaves an email or phone, asks to be contacted, OR wants to leave a message/note for Chuchurex, respond ONLY with something short confirming you'll pass it along (e.g. "Done, Chuchurex has been notified and will contact you soon." or "Done, I'll pass your message to Chuchurex.") and include [LEAD] at the end.
+- NEVER say you'll pass it along or that Chuchurex was notified without including [LEAD]. That creates an empty promise.
 - [LEAD] is invisible to the client; don't mention or explain it.
 
 IMPORTANT: ALWAYS respond in the language they write to you.""",
@@ -432,9 +432,9 @@ PROIBIÇÕES ABSOLUTAS:
 PREÇOS (só se perguntarem):
 Landing page: $200-300 USD | Site completo: $500-800 USD | App web: $800-3000 USD
 
-CAPTURA DE LEAD (contato):
-- Se o cliente deixar um email ou telefone, ou pedir explicitamente para ser contatado, responda APENAS algo curto como: "Pronto, Chuchurex já foi notificado e entrará em contato em breve." e inclua [LEAD] no final.
-- NUNCA diga que Chuchurex foi notificado sem incluir [LEAD]. Isso gera promessa vazia.
+CONTATO E MENSAGENS PARA CHUCHUREX:
+- Se o cliente deixar um email ou telefone, pedir para ser contatado, OU quiser deixar uma mensagem/recado para Chuchurex, responda APENAS algo curto confirmando que vai repassar (ex. "Pronto, Chuchurex já foi notificado e entrará em contato em breve." ou "Pronto, vou repassar sua mensagem para Chuchurex.") e inclua [LEAD] no final.
+- NUNCA diga que vai repassar ou que Chuchurex foi notificado sem incluir [LEAD]. Isso gera promessa vazia.
 - [LEAD] é invisível para o cliente; não o mencione nem explique.
 
 IMPORTANTE: Responda SEMPRE no idioma em que te escrevem."""
@@ -741,9 +741,17 @@ async def chat(request: ChatRequest, req: Request):
 
         save_chat(messages, response_text)
 
-        # Deteccion de lead: el usuario dejo contacto (email/tel) o el modelo marco [LEAD]
+        # Deteccion de lead: contacto (email/tel), intencion de dejar mensaje, o marcador [LEAD]
         contact_email, contact_phone = extract_contact(request.message)
-        if contact_email or contact_phone or "[LEAD]" in response_text:
+        _msg_lower = request.message.lower()
+        msg_intent_keywords = [
+            "mensaje para chuchurex", "dile a chuchurex", "dejarle un mensaje",
+            "déjale un mensaje", "dejale un mensaje", "dejar un mensaje", "recado",
+            "message for chuchurex", "tell chuchurex", "leave a message",
+            "mensagem para chuchurex", "deixar uma mensagem", "recado para",
+        ]
+        wants_to_message = any(kw in _msg_lower for kw in msg_intent_keywords)
+        if contact_email or contact_phone or wants_to_message or "[LEAD]" in response_text:
             await notify_lead(messages, contact_email, contact_phone)
             response_text = response_text.replace("[LEAD]", "").strip()
             if len(response_text) < 3:
