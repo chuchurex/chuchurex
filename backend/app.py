@@ -56,6 +56,13 @@ class RateLimiter:
         if len(self.requests[ip]) >= max_requests:
             return False
         self.requests[ip].append(now)
+        # Poda de claves muertas: sin esto el dict crece una clave por
+        # cada scope:IP que haya pasado alguna vez (leak de memoria)
+        if len(self.requests) > 1000:
+            stale = [k for k, v in self.requests.items()
+                     if k != ip and (not v or v[-1] < now - 3600)]
+            for k in stale:
+                del self.requests[k]
         return True
 
 rate_limiter = RateLimiter()
@@ -261,9 +268,16 @@ def _bridge_load_session(session_id: str) -> dict:
     return {"created": datetime.now().isoformat(), "messages": []}
 
 
-def _bridge_save_session(session_id: str, data: dict):
-    with open(_bridge_session_path(session_id), "w", encoding="utf-8") as f:
+def _bridge_write_json(path: Path, data):
+    """Escritura atómica: tmp + rename, para que un lector nunca vea JSON parcial."""
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def _bridge_save_session(session_id: str, data: dict):
+    _bridge_write_json(_bridge_session_path(session_id), data)
 
 
 def _bridge_load_map() -> dict:
@@ -283,8 +297,7 @@ def _bridge_map_add(tg_message_id: int, session_id: str):
     if len(tg_map) > BRIDGE_MAP_MAX:
         for key in list(tg_map.keys())[: len(tg_map) - BRIDGE_MAP_MAX]:
             del tg_map[key]
-    with open(BRIDGE_MAP_FILE, "w", encoding="utf-8") as f:
-        json.dump(tg_map, f)
+    _bridge_write_json(BRIDGE_MAP_FILE, tg_map)
 
 
 def _bridge_append(session_id: str, sender: str, text: str) -> dict:
@@ -1236,7 +1249,8 @@ async def bridge_messages(req: Request, session_id: str = Query(...), after: int
     if not BRIDGE_SESSION_RE.match(session_id or ""):
         raise HTTPException(status_code=400, detail="invalid_session")
 
-    data = _bridge_load_session(session_id)
+    async with bridge_lock:
+        data = _bridge_load_session(session_id)
     nuevos = [m for m in data["messages"] if m["id"] > after]
     return {"messages": nuevos}
 
@@ -1265,7 +1279,8 @@ async def telegram_webhook(req: Request):
         # Mensaje suelto en el chat del bot: no es una respuesta a un visitante
         return {"ok": True}
 
-    session_id = _bridge_load_map().get(str(reply_to))
+    async with bridge_lock:
+        session_id = _bridge_load_map().get(str(reply_to))
     if not session_id:
         await _telegram_send(
             "No encontré la sesión de ese mensaje (puede ser antiguo). "
