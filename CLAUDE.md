@@ -5,14 +5,20 @@ Este archivo es la fuente unica de verdad sobre como trabajar con este repo.
 ## Que es este repo
 
 `chuchurex/chuchurex` en GitHub. Cumple doble proposito:
-- Codigo del sitio chuchurex.cl (frontend) y su API (backend)
+- Codigo del frontend historico (portafolio + chatbot) y su API (backend)
 - Pipeline de chatbot con generacion de propuestas en PDF
 
 Hay un rediseño en curso para Bombus Lab en la rama `feature/hero-bombus`.
 
+**IMPORTANTE (jun 2026):** el dominio raiz chuchurex.cl ya NO sirve este frontend.
+Lo sirve el proyecto biblioteca (`~/Sites/active/biblioteca`, Pages project `biblioteca`).
+Este frontend quedo accesible solo en chuchurex.pages.dev. La API en api.chuchurex.cl
+sigue siendo de este repo. biblioteca.chuchurex.cl y www redirigen 301 a la raiz
+(Redirect Rules en la zona Cloudflare).
+
 ## Stack
 
-- **Frontend:** HTML/CSS/JS vanilla, hosting Cloudflare Pages, dominio chuchurex.cl
+- **Frontend:** HTML/CSS/JS vanilla, hosting Cloudflare Pages, solo en chuchurex.pages.dev
 - **Backend:** FastAPI (Python 3.13), Claude API (Haiku para chat, Sonnet para PDFs), hosting Fly.io
 - **PDFs:** Node 20 + Puppeteer + markdown-it
 - **DNS:** Cloudflare
