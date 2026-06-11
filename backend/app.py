@@ -90,6 +90,12 @@ client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
+# Puente humano web <-> Telegram (chat del about). Requiere ademas el secret del webhook.
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET")
+PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "https://api.chuchurex.cl")
+BRIDGE_DIR = DATA_DIR / "bridge"
+BRIDGE_DIR.mkdir(parents=True, exist_ok=True)
+
 # Detectar entorno
 IS_PRODUCTION = os.getenv("ENVIRONMENT", "development") == "production"
 
@@ -217,6 +223,103 @@ async def notify_lead(messages: list, contact_email: str = None, contact_phone: 
             msg = msg.replace(TELEGRAM_BOT_TOKEN, "***")
         logger.error(f"Error notificando lead por Telegram: {msg}")
         return False
+
+
+# =============================================================================
+# PUENTE HUMANO WEB <-> TELEGRAM (chat del about)
+# =============================================================================
+# El visitante escribe en el sitio; el mensaje llega al Telegram de Carlos.
+# Carlos responde con un reply sobre el mensaje y la respuesta queda disponible
+# para el poll del visitante. Sesiones persistidas en DATA_DIR/bridge.
+
+BRIDGE_SESSION_RE = re.compile(r"^[a-f0-9]{16,64}$")
+BRIDGE_MAP_FILE = BRIDGE_DIR / "tg_map.json"
+BRIDGE_MAX_MESSAGES = 500   # tope por sesion
+BRIDGE_MAP_MAX = 1000       # tope de mapeos message_id -> sesion
+
+bridge_lock = asyncio.Lock()
+
+
+def _scrub_token(text: str) -> str:
+    if TELEGRAM_BOT_TOKEN:
+        return text.replace(TELEGRAM_BOT_TOKEN, "***")
+    return text
+
+
+def _bridge_session_path(session_id: str) -> Path:
+    return BRIDGE_DIR / f"{session_id}.json"
+
+
+def _bridge_load_session(session_id: str) -> dict:
+    path = _bridge_session_path(session_id)
+    if path.exists():
+        try:
+            with open(path, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Sesion bridge corrupta {session_id[:8]}: {e}")
+    return {"created": datetime.now().isoformat(), "messages": []}
+
+
+def _bridge_save_session(session_id: str, data: dict):
+    with open(_bridge_session_path(session_id), "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+
+
+def _bridge_load_map() -> dict:
+    if BRIDGE_MAP_FILE.exists():
+        try:
+            with open(BRIDGE_MAP_FILE, encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _bridge_map_add(tg_message_id: int, session_id: str):
+    tg_map = _bridge_load_map()
+    tg_map[str(tg_message_id)] = session_id
+    # Trim de los mapeos mas antiguos (dict preserva orden de insercion)
+    if len(tg_map) > BRIDGE_MAP_MAX:
+        for key in list(tg_map.keys())[: len(tg_map) - BRIDGE_MAP_MAX]:
+            del tg_map[key]
+    with open(BRIDGE_MAP_FILE, "w", encoding="utf-8") as f:
+        json.dump(tg_map, f)
+
+
+def _bridge_append(session_id: str, sender: str, text: str) -> dict:
+    """Agrega un mensaje a la sesion y la persiste. Llamar con bridge_lock tomado."""
+    data = _bridge_load_session(session_id)
+    next_id = (data["messages"][-1]["id"] + 1) if data["messages"] else 1
+    msg = {
+        "id": next_id,
+        "from": sender,  # "visitor" | "host"
+        "text": text,
+        "ts": datetime.now().isoformat(),
+    }
+    data["messages"].append(msg)
+    _bridge_save_session(session_id, data)
+    return msg
+
+
+async def _telegram_send(text: str, reply_to: int = None) -> Optional[int]:
+    """Envia un mensaje al chat de Carlos. Devuelve el message_id o None."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return None
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text[:4000]}
+    if reply_to:
+        payload["reply_to_message_id"] = reply_to
+    try:
+        async with httpx.AsyncClient(timeout=10) as hc:
+            resp = await hc.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                json=payload,
+            )
+            resp.raise_for_status()
+            return resp.json().get("result", {}).get("message_id")
+    except Exception as e:
+        logger.error(f"Error enviando a Telegram: {_scrub_token(str(e))}")
+        return None
 
 # =============================================================================
 # SYSTEM PROMPTS (MULTILINGÜE)
@@ -492,6 +595,27 @@ class ChatResponse(BaseModel):
     generate_pdf: Optional[bool] = False
     pdf_url: Optional[str] = None
 
+class BridgeSendRequest(BaseModel):
+    session_id: str
+    text: str
+
+    @field_validator("session_id")
+    @classmethod
+    def session_id_valid(cls, v: str) -> str:
+        if not BRIDGE_SESSION_RE.match(v or ""):
+            raise ValueError("Invalid session_id")
+        return v
+
+    @field_validator("text")
+    @classmethod
+    def text_valid(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("Empty message")
+        if len(v) > 2000:
+            raise ValueError("Message too long (max 2000 chars)")
+        return v
+
 class ProposalRequest(BaseModel):
     client_name: str
     project_summary: str
@@ -534,6 +658,8 @@ if not IS_PRODUCTION:
         "http://127.0.0.1:3010",
         "http://localhost:5500",
         "http://127.0.0.1:5500",
+        "http://localhost:4020",
+        "http://127.0.0.1:4020",
     ])
 
 app.add_middleware(
@@ -1068,6 +1194,113 @@ Crea un documento de propuesta profesional en Markdown incluyendo:
     except Exception as e:
         logger.error(f"Error generating proposal: {e}")
         raise HTTPException(status_code=500, detail="internal_error")
+
+# =============================================================================
+# ENDPOINTS DEL PUENTE WEB <-> TELEGRAM
+# =============================================================================
+
+@app.post("/bridge/message")
+async def bridge_message(request: BridgeSendRequest, req: Request):
+    """Mensaje del visitante: se guarda en la sesion y se reenvia a Telegram."""
+    client_ip = req.client.host if req.client else "unknown"
+    if not rate_limiter.is_allowed(client_ip, max_requests=10, window_seconds=60):
+        raise HTTPException(status_code=429, detail="rate_limited")
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        raise HTTPException(status_code=503, detail="bridge_not_configured")
+
+    async with bridge_lock:
+        data = _bridge_load_session(request.session_id)
+        if len(data["messages"]) >= BRIDGE_MAX_MESSAGES:
+            raise HTTPException(status_code=429, detail="session_full")
+        es_primero = not any(m["from"] == "visitor" for m in data["messages"])
+        msg = _bridge_append(request.session_id, "visitor", request.text)
+
+    short = request.session_id[:8]
+    texto = f"Chat web · {short}\n\n{request.text}"
+    if es_primero:
+        texto += "\n\n(Nuevo visitante. Responde con un reply sobre este mensaje y le llega al sitio.)"
+    tg_message_id = await _telegram_send(texto)
+    if tg_message_id:
+        async with bridge_lock:
+            _bridge_map_add(tg_message_id, request.session_id)
+
+    return {"ok": True, "id": msg["id"], "delivered": tg_message_id is not None}
+
+
+@app.get("/bridge/messages")
+async def bridge_messages(req: Request, session_id: str = Query(...), after: int = Query(0)):
+    """Poll del visitante: mensajes de la sesion posteriores a `after`."""
+    client_ip = req.client.host if req.client else "unknown"
+    if not rate_limiter.is_allowed(client_ip, max_requests=60, window_seconds=60):
+        raise HTTPException(status_code=429, detail="rate_limited")
+    if not BRIDGE_SESSION_RE.match(session_id or ""):
+        raise HTTPException(status_code=400, detail="invalid_session")
+
+    data = _bridge_load_session(session_id)
+    nuevos = [m for m in data["messages"] if m["id"] > after]
+    return {"messages": nuevos}
+
+
+@app.post("/telegram/webhook")
+async def telegram_webhook(req: Request):
+    """Recibe las respuestas de Carlos desde Telegram (reply sobre un mensaje del puente)."""
+    if not TELEGRAM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=404, detail="not_found")
+    if req.headers.get("x-telegram-bot-api-secret-token") != TELEGRAM_WEBHOOK_SECRET:
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    try:
+        update = await req.json()
+    except Exception:
+        return {"ok": True}
+
+    msg = update.get("message") or {}
+    chat_id = str((msg.get("chat") or {}).get("id", ""))
+    text = msg.get("text")
+    if chat_id != str(TELEGRAM_CHAT_ID) or not text:
+        return {"ok": True}
+
+    reply_to = (msg.get("reply_to_message") or {}).get("message_id")
+    if not reply_to:
+        # Mensaje suelto en el chat del bot: no es una respuesta a un visitante
+        return {"ok": True}
+
+    session_id = _bridge_load_map().get(str(reply_to))
+    if not session_id:
+        await _telegram_send(
+            "No encontré la sesión de ese mensaje (puede ser antiguo). "
+            "Responde con un reply sobre un mensaje más reciente del visitante.",
+            reply_to=msg.get("message_id"),
+        )
+        return {"ok": True}
+
+    async with bridge_lock:
+        _bridge_append(session_id, "host", text)
+    logger.info(f"Respuesta de host entregada a sesion {session_id[:8]}")
+    return {"ok": True}
+
+
+@app.on_event("startup")
+async def setup_telegram_webhook():
+    """Registra el webhook de Telegram al arrancar (idempotente)."""
+    if not (TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET and IS_PRODUCTION):
+        logger.info("Webhook de Telegram no configurado (faltan secrets o no es produccion)")
+        return
+    try:
+        async with httpx.AsyncClient(timeout=10) as hc:
+            resp = await hc.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook",
+                json={
+                    "url": f"{PUBLIC_API_URL}/telegram/webhook",
+                    "secret_token": TELEGRAM_WEBHOOK_SECRET,
+                    "allowed_updates": ["message"],
+                },
+            )
+            ok = resp.json().get("ok")
+        logger.info(f"Webhook de Telegram registrado: {ok}")
+    except Exception as e:
+        logger.error(f"Error registrando webhook de Telegram: {_scrub_token(str(e))}")
+
 
 # =============================================================================
 # MAIN
