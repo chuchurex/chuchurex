@@ -686,7 +686,7 @@ async def root():
 async def health(req: Request):
     """Health check que verifica conexión real con Anthropic API"""
     client_ip = req.client.host if req.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip, max_requests=5, window_seconds=60):
+    if not rate_limiter.is_allowed(f"health:{client_ip}", max_requests=5, window_seconds=60):
         raise HTTPException(status_code=429, detail="rate_limited")
     try:
         # Llamada mínima para verificar que la API key funciona y hay crédito
@@ -769,7 +769,7 @@ async def view_chats(key: str = Query(None)):
 async def chat(request: ChatRequest, req: Request):
     """Endpoint principal del chat"""
     client_ip = req.client.host if req.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip, max_requests=20, window_seconds=60):
+    if not rate_limiter.is_allowed(f"chat:{client_ip}", max_requests=20, window_seconds=60):
         raise HTTPException(status_code=429, detail="rate_limited")
     try:
         # Sanitize history: enforce alternating user/assistant roles
@@ -1108,7 +1108,7 @@ async def download_proposal(filename: str):
 async def generate_proposal(request: ProposalRequest, req: Request, x_api_key: Optional[str] = Header(None)):
     """Genera una propuesta en PDF basada en datos proporcionados"""
     client_ip = req.client.host if req.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip, max_requests=3, window_seconds=300):
+    if not rate_limiter.is_allowed(f"proposal:{client_ip}", max_requests=3, window_seconds=300):
         raise HTTPException(status_code=429, detail="rate_limited")
     api_key = os.getenv("PROPOSAL_API_KEY")
     if api_key and (not x_api_key or x_api_key != api_key):
@@ -1203,7 +1203,7 @@ Crea un documento de propuesta profesional en Markdown incluyendo:
 async def bridge_message(request: BridgeSendRequest, req: Request):
     """Mensaje del visitante: se guarda en la sesion y se reenvia a Telegram."""
     client_ip = req.client.host if req.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip, max_requests=10, window_seconds=60):
+    if not rate_limiter.is_allowed(f"bridge_send:{client_ip}", max_requests=10, window_seconds=60):
         raise HTTPException(status_code=429, detail="rate_limited")
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         raise HTTPException(status_code=503, detail="bridge_not_configured")
@@ -1231,7 +1231,7 @@ async def bridge_message(request: BridgeSendRequest, req: Request):
 async def bridge_messages(req: Request, session_id: str = Query(...), after: int = Query(0)):
     """Poll del visitante: mensajes de la sesion posteriores a `after`."""
     client_ip = req.client.host if req.client else "unknown"
-    if not rate_limiter.is_allowed(client_ip, max_requests=60, window_seconds=60):
+    if not rate_limiter.is_allowed(f"bridge_poll:{client_ip}", max_requests=60, window_seconds=60):
         raise HTTPException(status_code=429, detail="rate_limited")
     if not BRIDGE_SESSION_RE.match(session_id or ""):
         raise HTTPException(status_code=400, detail="invalid_session")
